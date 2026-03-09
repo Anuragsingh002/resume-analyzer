@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Resume Analyzer</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div class="logo"><span>⚡</span> ResumeAI</div>
+    <div class="header-right">
+      <span class="free-badge">✓ 100% Free</span>
+      <span class="powered">Powered by Llama 3.1 + LangChain</span>
+    </div>
+  </header>
+
+  <!-- UPLOAD -->
+  <section id="s-upload">
+    <div class="hero">
+      <h1>AI-Powered <span>Resume Analysis</span></h1>
+      <p>Upload any PDF resume. Get instant candidate scoring, full profile breakdown, and 25 custom interview questions — completely free.</p>
+    </div>
+    <div class="upload-box" id="upload-box">
+      <div class="u-icon">📄</div>
+      <h3>Drag & Drop Resume Here</h3>
+      <p>or <label for="file-input" class="browse">click to browse</label></p>
+      <small>PDF only · Max 10MB</small>
+      <input type="file" id="file-input" accept=".pdf" hidden>
+    </div>
+    <div id="file-ready" class="hidden file-ready">
+      <span id="fname"></span>
+      <button id="go-btn" onclick="startAnalysis()">Analyze Resume →</button>
+    </div>
+  </section>
+
+  <!-- LOADING -->
+  <section id="s-loading" class="hidden">
+    <div class="loader-wrap">
+      <div class="ring"></div>
+      <h3>Analyzing resume with AI...</h3>
+      <p>This takes about 20–40 seconds</p>
+      <div class="steps-list">
+        <div class="sl" id="sl1">📄 Extracting text from PDF</div>
+        <div class="sl" id="sl2">🔢 Building vector embeddings</div>
+        <div class="sl" id="sl3">🧠 Llama 3.1 analyzing profile...</div>
+        <div class="sl" id="sl4">💬 Generating interview questions...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="s-results" class="hidden">
+    <div class="res-top">
+      <button onclick="resetApp()" class="back-btn">← Analyze Another</button>
+      <div id="rec-pill"></div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-left">
+        <div class="avatar" id="av"></div>
+        <div class="profile-info">
+          <h2 id="cname"></h2>
+          <div id="crole"></div>
+          <div id="ccontact"></div>
+        </div>
+      </div>
+      <div class="score-wrap">
+        <svg viewBox="0 0 120 120" width="120" height="120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#1e3a5f" stroke-width="10"/>
+          <circle id="score-ring" cx="60" cy="60" r="50" fill="none"
+            stroke="url(#sg)" stroke-width="10" stroke-linecap="round"
+            style="transition:stroke-dashoffset 1.6s ease;transform:rotate(-90deg);transform-origin:center"/>
+          <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#3b82f6"/>
+            <stop offset="100%" stop-color="#f97316"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="score-inner">
+          <span id="score-n">0</span>
+          <small>/100</small>
+        </div>
+      </div>
+    </div>
+
+    <p class="summary" id="csummary"></p>
+
+    <div class="tab-bar">
+      <button class="tab on" data-t="skills">Skills</button>
+      <button class="tab" data-t="experience">Experience</button>
+      <button class="tab" data-t="strengths">Strengths & Gaps</button>
+      <button class="tab" data-t="tech-q">Technical Qs</button>
+      <button class="tab" data-t="behavioral-q">Behavioral Qs</button>
+      <button class="tab" data-t="situational-q">Situational Qs</button>
+      <button class="tab" data-t="redflags">🚩 Red Flags</button>
+    </div>
+    <div id="tab-body"></div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

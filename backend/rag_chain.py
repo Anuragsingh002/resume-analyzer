@@ -2,7 +2,7 @@ import os, json, re
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_groq import ChatGroq
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
@@ -19,7 +19,7 @@ no text before or after the JSON."""
 
 class ResumeAnalyzer:
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(
+        self.embeddings = FastEmbedEmbeddings()(
             model_name=EMBEDDING_MODEL,
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True}

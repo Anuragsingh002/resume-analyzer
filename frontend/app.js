@@ -1,4 +1,4 @@
-const API = 'http://localhost:8000';
+const API = 'https://resume-analyzer-6wj1.onrender.com';
 
 let file = null, data = null;
 const $ = id => document.getElementById(id);

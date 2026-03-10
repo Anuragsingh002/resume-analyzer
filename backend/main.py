@@ -17,7 +17,21 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="TalentIQ API", version="2.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+ALLOWED_ORIGINS = [
+    "https://resume-atsc.netlify.app",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:5500",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class OutreachRequest(BaseModel):
     profile: dict
@@ -34,11 +48,20 @@ class SkillAdjacencyRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"product": "TalentIQ", "version": "2.0", "status": "operational", "pillars": 10}
+    return {
+        "product": "TalentIQ",
+        "version": "2.0",
+        "status": "operational",
+        "pillars": 10
+    }
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "engine": "TalentIQ v2.0", "model": "llama-3.3-70b-versatile"}
+    return {
+        "status": "healthy",
+        "engine": "TalentIQ v2.0",
+        "model": "llama-3.3-70b-versatile"
+    }
 
 @app.post("/analyze")
 async def analyze_resume(
@@ -47,23 +70,30 @@ async def analyze_resume(
 ):
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large. Max 10MB.")
+
     resume_text = extract_text_from_pdf(content)
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+
     result = await analyzer.analyze(resume_text, job_description)
     return result
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):
-    result = await analyzer.generate_outreach_email(req.profile, req.job_title, req.company_name)
+    result = await analyzer.generate_outreach_email(
+        req.profile, req.job_title, req.company_name
+    )
     return result
 
 @app.post("/generate-feedback-letter")
 async def generate_feedback_letter(req: FeedbackRequest):
-    result = await analyzer.generate_feedback_letter(req.profile, req.decision, req.job_title)
+    result = await analyzer.generate_feedback_letter(
+        req.profile, req.decision, req.job_title
+    )
     return result
 
 @app.post("/skill-adjacency")

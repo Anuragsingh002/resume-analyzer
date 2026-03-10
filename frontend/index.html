@@ -1,31 +1,437 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TalentIQ — AI Talent Intelligence Platform</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalentIQ — AI Talent Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #07070e;
+  --surface:  #0e0e1a;
+  --surface2: #131322;
+  --surface3: #191930;
+  --border:   #1e1e33;
+  --border2:  #28283f;
+  --brand:    #7c6ef8;
+  --brand2:   #a78bfa;
+  --brand-bg: rgba(124,110,248,.10);
+  --green:    #34d399;
+  --red:      #f87171;
+  --amber:    #fbbf24;
+  --blue:     #60a5fa;
+  --teal:     #2dd4bf;
+  --pink:     #f472b6;
+  --text:     #eeeeff;
+  --text2:    #8888b0;
+  --text3:    #44446a;
+  --radius:   10px;
+  --radius-sm:6px;
+  --sidebar:  228px;
+}
+[data-theme="light"] {
+  --bg:       #f4f3ff;
+  --surface:  #ffffff;
+  --surface2: #eeecff;
+  --surface3: #e6e3ff;
+  --border:   #dddaf5;
+  --border2:  #ccc9ee;
+  --brand:    #6366f1;
+  --brand2:   #818cf8;
+  --brand-bg: rgba(99,102,241,.08);
+  --green:    #059669;
+  --red:      #dc2626;
+  --amber:    #d97706;
+  --blue:     #2563eb;
+  --teal:     #0d9488;
+  --pink:     #db2777;
+  --text:     #12102a;
+  --text2:    #525070;
+  --text3:    #9090b8;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ── AMBIENT ── */
+.ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.amb-blob {
+  position: absolute; border-radius: 50%; filter: blur(90px); opacity: .18;
+  animation: blobFloat 18s ease-in-out infinite alternate;
+}
+.amb-blob--1 { width: 600px; height: 600px; background: var(--brand); top: -180px; left: -120px; animation-delay: 0s; }
+.amb-blob--2 { width: 500px; height: 500px; background: var(--teal); bottom: -100px; right: -100px; animation-delay: -6s; }
+.amb-blob--3 { width: 380px; height: 380px; background: var(--pink); top: 40%; left: 40%; animation-delay: -12s; }
+@keyframes blobFloat { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,20px) scale(1.07); } }
+.noise { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: .025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ── SCREENS ── */
+.screen { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 52px; border-bottom: 1px solid var(--border);
+  background: rgba(7,7,14,.7); backdrop-filter: blur(12px);
+  flex-shrink: 0; position: relative; z-index: 20;
+}
+[data-theme="light"] .topbar { background: rgba(244,243,255,.8); }
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-mark {
+  width: 26px; height: 26px; background: var(--brand); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; color: white;
+}
+.brand-name { font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
+.brand-ver { font-size: 11px; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.status-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--text2); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+.theme-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; position: relative; overflow: hidden;
+}
+.theme-btn:hover { border-color: var(--brand); color: var(--brand); }
+[data-theme="dark"] .icon-sun { display: none; }
+[data-theme="dark"] .icon-moon { display: block; }
+[data-theme="light"] .icon-sun { display: block; }
+[data-theme="light"] .icon-moon { display: none; }
+
+/* ── API KEY BAR ── */
+.api-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 4px 4px 12px;
+}
+.api-bar input {
+  background: none; border: none; outline: none; color: var(--text); font-size: 12.5px;
+  font-family: 'JetBrains Mono', monospace; width: 220px;
+}
+.api-bar input::placeholder { color: var(--text3); }
+.api-bar-badge {
+  font-size: 10px; background: var(--amber); color: #000; font-weight: 600;
+  padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+}
+
+/* ── UPLOAD SCREEN ── */
+#screen-upload { background: var(--bg); }
+.upload-main { flex: 1; overflow-y: auto; display: flex; align-items: center; justify-content: center; padding: 40px 24px; position: relative; z-index: 10; }
+.upload-grid { display: grid; grid-template-columns: 1fr 440px; gap: 48px; max-width: 1100px; width: 100%; align-items: start; }
+
+/* Hero */
+.hero-eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--brand2); font-weight: 500; margin-bottom: 20px; letter-spacing: .04em; text-transform: uppercase; }
+.eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 8px var(--brand); }
+.hero-h1 { font-family: 'DM Serif Display', serif; font-size: clamp(38px,5vw,58px); line-height: 1.08; margin-bottom: 20px; display: flex; flex-direction: column; gap: 2px; }
+.hero-line--italic { font-style: italic; color: var(--brand2); }
+.hero-line--dim { color: var(--text2); }
+.hero-p { color: var(--text2); font-size: 15px; line-height: 1.7; max-width: 480px; margin-bottom: 32px; }
+.feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+.feat-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  transition: border-color .2s, transform .2s;
+}
+.feat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.feat-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.feat-icon--blue { background: rgba(96,165,250,.15); color: var(--blue); }
+.feat-icon--teal { background: rgba(45,212,191,.15); color: var(--teal); }
+.feat-icon--violet { background: var(--brand-bg); color: var(--brand); }
+.feat-icon--amber { background: rgba(251,191,36,.15); color: var(--amber); }
+.feat-icon--green { background: rgba(52,211,153,.15); color: var(--green); }
+.feat-icon--pink { background: rgba(244,114,182,.15); color: var(--pink); }
+.feat-title { font-size: 12.5px; font-weight: 600; }
+.feat-desc { font-size: 11.5px; color: var(--text2); }
+.new-badge { font-size: 10px; background: var(--brand); color: white; padding: 1px 5px; border-radius: 3px; vertical-align: middle; margin-left: 4px; }
+.trust-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.trust-chip { font-size: 11.5px; color: var(--text3); }
+.trust-sep { color: var(--text3); }
+
+/* Panel */
+.upload-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,.3);
+}
+.panel-header { padding: 20px 24px 0; }
+.panel-title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+.panel-sub { font-size: 12px; color: var(--text3); }
+.panel-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.field-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.req-badge { font-size: 10px; background: var(--surface3); border: 1px solid var(--border2); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; color: var(--text3); }
+.optional-badge { font-size: 10px; color: var(--text3); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.dropzone {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius);
+  background: var(--surface2); cursor: pointer; transition: all .2s;
+  min-height: 110px; display: flex; align-items: center; justify-content: center;
+}
+.dropzone.over { border-color: var(--brand); background: var(--brand-bg); }
+.dz-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; text-align: center; }
+.dz-upload-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.dz-primary { font-size: 13px; color: var(--text2); }
+.dz-browse { background: none; border: none; color: var(--brand); cursor: pointer; font-size: 13px; font-family: inherit; text-decoration: underline; }
+.dz-hint { font-size: 11.5px; color: var(--text3); }
+.dz-ready { display: flex; align-items: center; gap: 12px; padding: 14px 18px; width: 100%; }
+.dz-file-icon { color: var(--brand); flex-shrink: 0; }
+.dz-file-info { flex: 1; min-width: 0; }
+.dz-file-name { font-size: 13px; font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dz-file-size { font-size: 11.5px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+.dz-remove { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+.dz-remove:hover { color: var(--red); border-color: var(--red); }
+.jd-input {
+  width: 100%; min-height: 110px; background: var(--surface2); border: 1.5px solid var(--border2);
+  border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; padding: 12px 14px; resize: vertical; outline: none; transition: border-color .2s;
+}
+.jd-input::placeholder { color: var(--text3); }
+.jd-input:focus { border-color: var(--brand); }
+.run-btn {
+  width: 100%; height: 46px; background: var(--brand); border: none;
+  border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 600;
+  color: white; position: relative; overflow: hidden; transition: all .2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.run-btn:disabled { opacity: .45; cursor: not-allowed; background: var(--surface3); color: var(--text3); }
+.run-btn:not(:disabled):hover { background: var(--brand2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,110,248,.35); }
+.run-btn-inner { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; z-index: 1; }
+.error-hint { font-size: 12px; color: var(--red); text-align: center; display: none; }
+.demo-note { font-size: 11.5px; color: var(--text3); text-align: center; }
+.demo-note strong { color: var(--amber); }
+
+/* ── LOADING SCREEN ── */
+#screen-loading { background: var(--bg); justify-content: center; align-items: center; }
+.loading-wrap { display: flex; flex-direction: column; align-items: center; gap: 32px; max-width: 360px; width: 100%; position: relative; z-index: 10; }
+.loading-visual { position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+.lv-ring { position: absolute; border-radius: 50%; border: 1.5px solid transparent; }
+.lv-ring--1 { inset: 0; border-top-color: var(--brand); animation: spin 1.4s linear infinite; }
+.lv-ring--2 { inset: 8px; border-right-color: var(--teal); animation: spin 2.1s linear infinite reverse; }
+.lv-ring--3 { inset: 16px; border-bottom-color: var(--pink); animation: spin 1.8s linear infinite; opacity: .6; }
+.lv-core { width: 32px; height: 32px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; color: var(--brand); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { text-align: center; }
+.loading-h2 { font-family: 'DM Serif Display', serif; font-size: 24px; margin-bottom: 6px; }
+.loading-sub { font-size: 13px; color: var(--text2); }
+.step-list { width: 100%; display: flex; flex-direction: column; gap: 2px; }
+.step { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--radius-sm); transition: background .2s; }
+.step.active { background: var(--surface); }
+.step-indicator { width: 18px; height: 18px; flex-shrink: 0; }
+.step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); margin: 5px; transition: all .3s; }
+.step.active .step-dot { background: var(--brand); box-shadow: 0 0 8px var(--brand); animation: pulse 1s ease-in-out infinite; }
+.step.done .step-dot { background: var(--green); box-shadow: none; animation: none; }
+.step-body { flex: 1; }
+.step-name { font-size: 12.5px; font-weight: 500; display: block; }
+.step.active .step-name { color: var(--text); }
+.step:not(.active):not(.done) .step-name { color: var(--text3); }
+.step.done .step-name { color: var(--green); }
+.step-desc { font-size: 11.5px; color: var(--text3); display: block; }
+
+/* ── RESULTS LAYOUT ── */
+#screen-results { flex-direction: row; background: var(--bg); }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar); height: 100%; display: flex; flex-direction: column;
+  background: var(--surface); border-right: 1px solid var(--border);
+  flex-shrink: 0; overflow: hidden;
+}
+.sb-top { padding: 14px 14px 0; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+.sb-brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sb-candidate {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px;
+}
+.sb-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-bg); border: 1.5px solid var(--brand); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--brand); flex-shrink: 0; }
+.sb-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-role { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-scores { display: flex; align-items: center; }
+.sb-score-cell { flex: 1; text-align: center; padding: 6px 0; }
+.sb-score-val { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 500; color: var(--brand2); display: block; }
+.sb-score-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+.sb-score-sep { width: 1px; height: 28px; background: var(--border); }
+
+.sb-nav { flex: 1; overflow-y: auto; padding: 10px 10px 0; }
+.sb-nav::-webkit-scrollbar { width: 3px; }
+.sb-nav::-webkit-scrollbar-track { background: transparent; }
+.sb-nav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.nav-section { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; padding: 14px 6px 6px; }
+.nav-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--radius-sm); border: none;
+  background: none; color: var(--text2); cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px; text-align: left;
+  transition: all .15s; margin-bottom: 1px;
+}
+.nav-btn:hover { background: var(--surface2); color: var(--text); }
+.nav-btn.active { background: var(--brand-bg); color: var(--brand); font-weight: 500; }
+.nav-btn--danger { color: var(--red) !important; }
+.nav-btn--danger:hover { background: rgba(248,113,113,.1) !important; }
+.nav-btn--special { color: var(--teal); }
+.nav-btn--agent { color: var(--brand2); }
+.nav-new-badge { font-size: 9px; background: var(--brand); color: white; padding: 1px 5px; border-radius: 3px; font-weight: 600; vertical-align: middle; margin-left: 4px; }
+
+.sb-footer { padding: 12px; border-top: 1px solid var(--border); }
+.new-analysis-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px; border-radius: var(--radius-sm); border: 1px solid var(--border2);
+  background: none; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px; font-weight: 500; transition: all .15s;
+}
+.new-analysis-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+
+/* Results main */
+.results-main { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.results-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; background: var(--surface);
+}
+.results-h1 { font-size: 16px; font-weight: 600; }
+.results-timestamp { font-size: 11.5px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.hire-badge { font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 20px; display: none; }
+.hire-badge.yes { display: block; background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.3); }
+.hire-badge.no { display: block; background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+.hire-badge.maybe { display: block; background: rgba(251,191,36,.12); color: var(--amber); border: 1px solid rgba(251,191,36,.3); }
+.tab-content { flex: 1; overflow-y: auto; padding: 28px; }
+.tab-content::-webkit-scrollbar { width: 4px; }
+.tab-content::-webkit-scrollbar-track { background: transparent; }
+.tab-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* ── SHARED RESULT COMPONENTS ── */
+.section-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 4px; }
+.section-desc { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-card-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 8px; }
+.stat-card-val { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 500; color: var(--brand2); line-height: 1; margin-bottom: 4px; }
+.stat-card-sub { font-size: 12px; color: var(--text2); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.panel-label { font-size: 11.5px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+.score-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.score-bar-label { font-size: 12.5px; color: var(--text2); min-width: 170px; }
+.score-bar-track { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 3px; background: var(--brand); transition: width 1s cubic-bezier(.4,0,.2,1); }
+.score-bar-val { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text2); min-width: 34px; text-align: right; }
+
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 7px; }
+.tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid; font-weight: 500; }
+.tag--brand { background: var(--brand-bg); color: var(--brand2); border-color: rgba(124,110,248,.25); }
+.tag--green { background: rgba(52,211,153,.1); color: var(--green); border-color: rgba(52,211,153,.25); }
+.tag--red { background: rgba(248,113,113,.1); color: var(--red); border-color: rgba(248,113,113,.25); }
+.tag--amber { background: rgba(251,191,36,.1); color: var(--amber); border-color: rgba(251,191,36,.25); }
+.tag--blue { background: rgba(96,165,250,.1); color: var(--blue); border-color: rgba(96,165,250,.25); }
+.tag--teal { background: rgba(45,212,191,.1); color: var(--teal); border-color: rgba(45,212,191,.25); }
+.tag--gray { background: var(--surface2); color: var(--text2); border-color: var(--border); }
+.tag--dim { background: var(--surface3); color: var(--text3); border-color: var(--border); }
+
+.list-items { display: flex; flex-direction: column; gap: 10px; }
+.list-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.list-item-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.list-item-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.list-item-text strong { color: var(--text); font-weight: 600; }
+
+.q-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+.q-card-num { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text3); margin-bottom: 6px; }
+.q-card-text { font-size: 13.5px; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+.q-card-intent { font-size: 12px; color: var(--text3); font-style: italic; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: flex; gap: 16px; padding-bottom: 20px; position: relative; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 18px; }
+.tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand); border: 2px solid var(--bg); flex-shrink: 0; margin-top: 4px; }
+.tl-line { flex: 1; width: 1.5px; background: var(--border); margin-top: 4px; }
+.tl-item:last-child .tl-line { display: none; }
+.tl-body { flex: 1; padding-bottom: 4px; }
+.tl-company { font-size: 14px; font-weight: 600; }
+.tl-role { font-size: 13px; color: var(--brand2); margin-bottom: 2px; }
+.tl-dates { font-size: 11.5px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+.tl-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.big-score { text-align: center; padding: 24px; }
+.big-score-num { font-family: 'JetBrains Mono', monospace; font-size: 56px; font-weight: 500; line-height: 1; margin-bottom: 4px; }
+.big-score-label { font-size: 12px; color: var(--text2); }
+
+.flag-card { background: var(--surface); border: 1px solid rgba(248,113,113,.25); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; }
+.flag-icon { color: var(--red); flex-shrink: 0; margin-top: 2px; }
+.flag-title { font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 3px; }
+.flag-desc { font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+
+.outreach-block { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); }
+.outreach-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.outreach-header span { font-size: 12.5px; font-weight: 600; color: var(--text2); }
+.copy-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif; }
+.copy-btn:hover { border-color: var(--brand); color: var(--brand); }
+.outreach-body { padding: 16px; font-size: 13px; color: var(--text); line-height: 1.7; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+.decision-card { background: var(--surface); border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); }
+.decision-header { padding: 20px 24px; }
+.decision-header.yes { background: rgba(52,211,153,.08); border-bottom: 1px solid rgba(52,211,153,.2); }
+.decision-header.no { background: rgba(248,113,113,.08); border-bottom: 1px solid rgba(248,113,113,.2); }
+.decision-header.maybe { background: rgba(251,191,36,.08); border-bottom: 1px solid rgba(251,191,36,.2); }
+.decision-verdict { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 4px; }
+.decision-conf { font-size: 13px; color: var(--text2); }
+.decision-body { padding: 20px 24px; }
+.decision-reasoning { font-size: 13.5px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(24px);
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 18px; font-size: 13px; color: var(--text); z-index: 1000;
+  pointer-events: none; opacity: 0; transition: all .3s; white-space: nowrap;
+  box-shadow: 0 12px 32px rgba(0,0,0,.3);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── UTILITY ── */
+.hidden { display: none !important; }
+</style>
 </head>
 <body>
 
-<!-- ░░░░ AMBIENT ░░░░ -->
+<div class="noise" aria-hidden="true"></div>
 <div class="ambient" aria-hidden="true">
   <div class="amb-blob amb-blob--1"></div>
   <div class="amb-blob amb-blob--2"></div>
   <div class="amb-blob amb-blob--3"></div>
-  <div class="noise-overlay"></div>
 </div>
 
-<!-- ░░░░ UPLOAD SCREEN ░░░░ -->
+<!-- ░░ UPLOAD SCREEN ░░ -->
 <div id="screen-upload" class="screen active">
   <header class="topbar">
     <div class="topbar-left">
       <div class="brand">
         <div class="brand-mark">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+          <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.3"/>
             <path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/>
           </svg>
         </div>
@@ -34,11 +440,19 @@
       </div>
     </div>
     <div class="topbar-right">
+      <div class="api-bar">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="color:var(--text3)">
+          <rect x=".5" y="4" width="11" height="7.5" rx="1.5" stroke="currentColor"/>
+          <path d="M3.5 4V3a2.5 2.5 0 015 0v1" stroke="currentColor" stroke-linecap="round"/>
+        </svg>
+        <input type="password" id="api-key-input" placeholder="Groq API key (optional — demo mode without)">
+        <span class="api-bar-badge">GROQ</span>
+      </div>
       <div class="status-chip">
         <span class="status-dot"></span>
         <span>Llama 3.3 · 70B</span>
       </div>
-      <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <button class="theme-btn" onclick="toggleTheme()">
         <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
       </button>
@@ -47,237 +461,106 @@
 
   <main class="upload-main">
     <div class="upload-grid">
-
-      <!-- Left: Hero -->
       <div class="hero-col">
-        <div class="hero-eyebrow">
-          <span class="eyebrow-dot"></span>
-          AI Talent Intelligence
-        </div>
+        <div class="hero-eyebrow"><span class="eyebrow-dot"></span>AI Talent Intelligence</div>
         <h1 class="hero-h1">
-          <span class="hero-line" data-delay="0">Hire smarter.</span>
-          <span class="hero-line hero-line--italic" data-delay="120">Move faster.</span>
-          <span class="hero-line hero-line--dim" data-delay="240">Miss nothing.</span>
+          <span class="hero-line">Hire smarter.</span>
+          <span class="hero-line hero-line--italic">Move faster.</span>
+          <span class="hero-line hero-line--dim">Miss nothing.</span>
         </h1>
         <p class="hero-p">The world's most advanced resume intelligence engine — deep semantic parsing, calibrated ATS scoring, bias auditing, and AI-powered recruitment workflows in one platform.</p>
-
-        <div class="feature-grid">
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--blue">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.3.5-2.4 2.3.56 3.3L7 8.6 4.04 10.1l.56-3.3L2.2 4.5l3.3-.5L7 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">6-Axis ATS Scoring</p>
-              <p class="feat-desc">Calibrated, inflation-resistant scores</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--teal">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4 7l2 2 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">JD Alignment</p>
-              <p class="feat-desc">Real vs buzz skill validation</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--violet">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">33+ Interview Questions</p>
-              <p class="feat-desc">6 categories, role-specific</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--amber">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1 12c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4M10 2.5l1 1 2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Ethical Bias Audit</p>
-              <p class="feat-desc">PII detection, fairness scoring</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--green">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 9.5L4 6.5l2.5 2 3.5-5 2.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 12h11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Impact Quantification</p>
-              <p class="feat-desc">Measurable achievement scoring</p>
-            </div>
-          </div>
-          <div class="feat-card feat-card--new">
-            <div class="feat-icon feat-icon--pink">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v3M7 9.5v3M1.5 7h3M9.5 7h3M3 3l2 2M9 9l2 2M3 11l2-2M9 5l2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Recruitment Agent <span class="new-badge">New</span></p>
-              <p class="feat-desc">Pipeline, JD Generator, Decisions</p>
-            </div>
-          </div>
+        <div class="feat-grid">
+          <div class="feat-card"><div class="feat-icon feat-icon--blue"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.3.5-2.4 2.3.56 3.3L7 8.6l-2.96 1.5.56-3.3L2.2 4.5l3.3-.5L7 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></div><div><p class="feat-title">6-Axis ATS Scoring</p><p class="feat-desc">Calibrated, inflation-resistant scores</p></div></div>
+          <div class="feat-card"><div class="feat-icon feat-icon--teal"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4 7l2 2 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><p class="feat-title">JD Alignment</p><p class="feat-desc">Real vs buzz skill validation</p></div></div>
+          <div class="feat-card"><div class="feat-icon feat-icon--violet"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><p class="feat-title">33+ Interview Questions</p><p class="feat-desc">6 categories, role-specific</p></div></div>
+          <div class="feat-card"><div class="feat-icon feat-icon--amber"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1 12c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4M10 2.5l1 1 2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><p class="feat-title">Ethical Bias Audit</p><p class="feat-desc">PII detection, fairness scoring</p></div></div>
+          <div class="feat-card"><div class="feat-icon feat-icon--green"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 9.5L4 6.5l2.5 2 3.5-5 2.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><p class="feat-title">Impact Quantification</p><p class="feat-desc">Measurable achievement scoring</p></div></div>
+          <div class="feat-card"><div class="feat-icon feat-icon--pink"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v3M7 9.5v3M1.5 7h3M9.5 7h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></div><div><p class="feat-title">Recruitment Agent <span class="new-badge">New</span></p><p class="feat-desc">Pipeline, JD Generator, Decisions</p></div></div>
         </div>
-
         <div class="trust-row">
-          <span class="trust-chip">Zero data retention</span>
-          <span class="trust-sep">·</span>
-          <span class="trust-chip">Groq LPU inference</span>
-          <span class="trust-sep">·</span>
+          <span class="trust-chip">Zero data retention</span><span class="trust-sep">·</span>
+          <span class="trust-chip">Groq LPU inference</span><span class="trust-sep">·</span>
           <span class="trust-chip">FastAPI backend</span>
         </div>
       </div>
 
-      <!-- Right: Form Panel -->
       <div class="upload-panel">
         <div class="panel-header">
           <h2 class="panel-title">Start Analysis</h2>
-          <span class="panel-sub">Average 45 seconds</span>
+          <span class="panel-sub">Average 45 seconds · Powered by Llama 3.3 70B</span>
         </div>
         <div class="panel-body">
-
           <div class="field-group">
             <label class="field-label">Resume <span class="req-badge">PDF</span></label>
-            <div class="dropzone" id="drop-zone">
+            <div class="dropzone" id="drop-zone" onclick="document.getElementById('file-input').click()">
               <input type="file" id="file-input" accept=".pdf" hidden>
               <div class="dz-idle" id="dz-idle">
                 <div class="dz-upload-icon">
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3v12M7 7l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 16v2a1 1 0 001 1h14a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </div>
-                <p class="dz-primary">Drop PDF here or <button class="dz-browse" onclick="document.getElementById('file-input').click()">browse</button></p>
+                <p class="dz-primary">Drop PDF here or <span style="color:var(--brand);text-decoration:underline;cursor:pointer">browse</span></p>
                 <p class="dz-hint">Maximum 10 MB · Encrypted in transit</p>
               </div>
               <div class="dz-ready hidden" id="dz-ready">
-                <div class="dz-file-icon">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="1" width="11" height="16" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 9h6M5 12h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M10 1v5h5" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-                </div>
-                <div class="dz-file-info">
-                  <span class="dz-file-name" id="dz-file-name"></span>
-                  <span class="dz-file-size" id="dz-file-size"></span>
-                </div>
-                <button class="dz-remove" id="dz-remove" onclick="removeFile()">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-                </button>
+                <div class="dz-file-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="1" width="11" height="16" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 9h6M5 12h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M10 1v5h5" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></div>
+                <div class="dz-file-info"><span class="dz-file-name" id="dz-file-name"></span><span class="dz-file-size" id="dz-file-size"></span></div>
+                <button class="dz-remove" id="dz-remove" onclick="removeFile(event)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
               </div>
             </div>
           </div>
-
           <div class="field-group">
-            <label class="field-label" for="jd-input">
-              Job Description
-              <span class="optional-badge">Optional</span>
-            </label>
+            <label class="field-label" for="jd-input">Job Description <span class="optional-badge">(Optional — enables JD alignment)</span></label>
             <textarea id="jd-input" class="jd-input" placeholder="Paste a job description to unlock role-specific alignment scoring, skill gap analysis, and targeted interview questions…"></textarea>
           </div>
-
           <button class="run-btn" id="run-btn" onclick="startAnalysis()" disabled>
             <span class="run-btn-inner">
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5l4 2-4 2V5.5z" fill="currentColor"/></svg>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5l3 1.5-3 1.5V5.5z" fill="currentColor"/></svg>
               <span id="run-btn-text">Select a resume to begin</span>
             </span>
-            <span class="run-btn-shimmer"></span>
           </button>
-
-          <div id="upload-error-hint" class="upload-error-hint hidden"></div>
+          <p class="demo-note">No API key? <strong>Demo mode</strong> loads rich sample data instantly.</p>
+          <p class="error-hint" id="error-hint"></p>
         </div>
       </div>
-
     </div>
   </main>
 </div>
 
-<!-- ░░░░ LOADING SCREEN ░░░░ -->
+<!-- ░░ LOADING SCREEN ░░ -->
 <div id="screen-loading" class="screen">
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand">
-        <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
-        <span class="brand-name">TalentIQ</span>
-        <span class="brand-ver">v4.0</span>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <button class="theme-btn" onclick="toggleTheme()">
-        <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
-      </button>
-    </div>
-  </header>
-  <main class="loading-main">
+  <main class="loading-main" style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:10">
     <div class="loading-wrap">
       <div class="loading-visual">
         <div class="lv-ring lv-ring--1"></div>
         <div class="lv-ring lv-ring--2"></div>
         <div class="lv-ring lv-ring--3"></div>
         <div class="lv-core">
-          <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg>
+          <svg width="16" height="16" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg>
         </div>
-        <svg class="lv-progress" viewBox="0 0 80 80" fill="none">
-          <circle cx="40" cy="40" r="36" stroke="var(--line2)" stroke-width="2"/>
-          <circle cx="40" cy="40" r="36" stroke="var(--brand)" stroke-width="2" stroke-linecap="round"
-            stroke-dasharray="226" stroke-dashoffset="226" id="lv-progress-ring"/>
-        </svg>
       </div>
       <div class="loading-text">
         <h2 class="loading-h2">Analysing candidate</h2>
-        <p class="loading-sub" id="loading-sub-text">Running intelligence modules…</p>
+        <p class="loading-sub" id="loading-sub">Running intelligence modules…</p>
       </div>
-      <div class="step-list">
-        <div class="step" id="ls1">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name" id="ls1-label">Connecting to server</span>
-            <span class="step-desc">Waking up inference engine</span>
-          </div>
-        </div>
-        <div class="step" id="ls2">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Semantic PDF parsing</span>
-            <span class="step-desc">Extracting structure, context and metadata</span>
-          </div>
-        </div>
-        <div class="step" id="ls3">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">ATS scoring &amp; JD alignment</span>
-            <span class="step-desc">Six-dimensional scoring and role match analysis</span>
-          </div>
-        </div>
-        <div class="step" id="ls4">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Impact quantification</span>
-            <span class="step-desc">Detecting measurable achievements and substance</span>
-          </div>
-        </div>
-        <div class="step" id="ls5">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Interview pack generation</span>
-            <span class="step-desc">33 role-specific questions across six categories</span>
-          </div>
-        </div>
-        <div class="step" id="ls6">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Coaching &amp; bias audit</span>
-            <span class="step-desc">Upskilling roadmap and fairness evaluation</span>
-          </div>
-        </div>
+      <div class="step-list" id="step-list">
+        <div class="step" id="s1"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">Connecting to inference engine</span><span class="step-desc">Waking up Groq LPU runtime</span></div></div>
+        <div class="step" id="s2"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">Semantic PDF parsing</span><span class="step-desc">Extracting structure, context and metadata</span></div></div>
+        <div class="step" id="s3"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">ATS scoring &amp; JD alignment</span><span class="step-desc">Six-dimensional scoring and role match analysis</span></div></div>
+        <div class="step" id="s4"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">Impact quantification</span><span class="step-desc">Detecting measurable achievements and substance</span></div></div>
+        <div class="step" id="s5"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">Interview pack generation</span><span class="step-desc">33 role-specific questions across six categories</span></div></div>
+        <div class="step" id="s6"><div class="step-indicator"><div class="step-dot"></div></div><div class="step-body"><span class="step-name">Coaching &amp; bias audit</span><span class="step-desc">Upskilling roadmap and fairness evaluation</span></div></div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- ░░░░ RESULTS SCREEN ░░░░ -->
-<div id="screen-results" class="screen results-layout">
-
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
+<!-- ░░ RESULTS SCREEN ░░ -->
+<div id="screen-results" class="screen">
+  <aside class="sidebar">
     <div class="sb-top">
       <div class="sb-brand">
         <div class="brand">
-          <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
+          <div class="brand-mark"><svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
           <span class="brand-name">TalentIQ</span>
         </div>
         <button class="theme-btn" onclick="toggleTheme()">
@@ -285,8 +568,6 @@
           <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
         </button>
       </div>
-
-      <!-- Candidate card -->
       <div class="sb-candidate">
         <div class="sb-avatar" id="sb-avatar"></div>
         <div class="sb-candidate-info">
@@ -294,125 +575,50 @@
           <p class="sb-role" id="sb-role">—</p>
         </div>
       </div>
-
-      <!-- Score strip -->
       <div class="sb-scores">
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-score">—</span>
-          <span class="sb-score-lbl">ATS</span>
-        </div>
+        <div class="sb-score-cell"><span class="sb-score-val" id="sb-score">—</span><span class="sb-score-lbl">ATS</span></div>
         <div class="sb-score-sep"></div>
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-jd">—</span>
-          <span class="sb-score-lbl">JD Fit</span>
-        </div>
+        <div class="sb-score-cell"><span class="sb-score-val" id="sb-jd">—</span><span class="sb-score-lbl">JD Fit</span></div>
         <div class="sb-score-sep"></div>
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-yrs">—</span>
-          <span class="sb-score-lbl">Yrs</span>
-        </div>
+        <div class="sb-score-cell"><span class="sb-score-val" id="sb-yrs">—</span><span class="sb-score-lbl">Yrs</span></div>
       </div>
     </div>
-
-    <!-- Nav -->
     <nav class="sb-nav">
       <p class="nav-section">Analysis</p>
-      <button class="nav-btn active" data-tab="overview">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x=".5" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/></svg>
-        Overview
-      </button>
-      <button class="nav-btn" data-tab="ats">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 9l2.5-3 2 2L8 4l3 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11h10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
-        ATS Scores
-      </button>
-      <button class="nav-btn" data-tab="skills">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor"/><circle cx="8.5" cy="8.5" r="2" stroke="currentColor"/><path d="M4 6v1.5M8.5 1v1.5M2 8.5h2M8.5 4h2" stroke="currentColor" stroke-linecap="round"/></svg>
-        Skills
-      </button>
-      <button class="nav-btn" data-tab="experience">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="3" width="11" height="8" rx="1" stroke="currentColor"/><path d="M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M.5 7h11" stroke="currentColor" stroke-linecap="round"/></svg>
-        Experience
-      </button>
-      <button class="nav-btn" data-tab="analysis">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.3 2.7 3 .4-2.15 2.1.5 3L6 7.8 3.35 9.2l.5-3L1.7 4.1l3-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
-        Strengths &amp; Gaps
-      </button>
-      <button class="nav-btn" data-tab="impact">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 9.5l2.5-3 2 2 2.5-4 2 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Impact Score
-      </button>
-      <button class="nav-btn" data-tab="realvsbuzz">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3.5-3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Real vs Buzz
-      </button>
-      <button class="nav-btn" data-tab="jdmatch">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3-3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        JD Match
-      </button>
-      <button class="nav-btn nav-btn--danger" data-tab="redflags">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5L1 10.5h10L6 1.5z" stroke="currentColor" stroke-linejoin="round"/><path d="M6 5.5V8" stroke="currentColor" stroke-linecap="round"/><circle cx="6" cy="9.5" r=".5" fill="currentColor"/></svg>
-        Red Flags
-      </button>
-
+      <button class="nav-btn active" data-tab="overview"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x=".5" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/></svg>Overview</button>
+      <button class="nav-btn" data-tab="ats"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 9l2.5-3 2 2L8 4l3 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11h10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>ATS Scores</button>
+      <button class="nav-btn" data-tab="skills"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor"/><circle cx="8.5" cy="8.5" r="2" stroke="currentColor"/><path d="M4 6v1.5M8.5 1v1.5M2 8.5h2M8.5 4h2" stroke="currentColor" stroke-linecap="round"/></svg>Skills</button>
+      <button class="nav-btn" data-tab="experience"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="3" width="11" height="8" rx="1" stroke="currentColor"/><path d="M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M.5 7h11" stroke="currentColor" stroke-linecap="round"/></svg>Experience</button>
+      <button class="nav-btn" data-tab="analysis"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.3 2.7 3 .4-2.15 2.1.5 3L6 7.8l-2.65 1.4.5-3L1.7 4.1l3-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>Strengths &amp; Gaps</button>
+      <button class="nav-btn" data-tab="impact"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 9.5l2.5-3 2 2 2.5-4 2 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Impact Score</button>
+      <button class="nav-btn" data-tab="realvsbuzz"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3.5-3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Real vs Buzz</button>
+      <button class="nav-btn" data-tab="jdmatch"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3-3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>JD Match</button>
+      <button class="nav-btn nav-btn--danger" data-tab="redflags"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5L1 10.5h10L6 1.5z" stroke="currentColor" stroke-linejoin="round"/><path d="M6 5.5V8" stroke="currentColor" stroke-linecap="round"/><circle cx="6" cy="9.5" r=".5" fill="currentColor"/></svg>Red Flags</button>
       <p class="nav-section">Interview Pack</p>
-      <button class="nav-btn" data-tab="technical">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L1 6l2 3M9 3l2 3-2 3M7 2l-2 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Technical
-      </button>
-      <button class="nav-btn" data-tab="behavioral">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="3.5" r="2" stroke="currentColor"/><path d="M1.5 11c0-2 2-3.5 4.5-3.5S10.5 9 10.5 11" stroke="currentColor" stroke-linecap="round"/></svg>
-        Behavioural
-      </button>
-      <button class="nav-btn" data-tab="situational">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-        Situational
-      </button>
-      <button class="nav-btn" data-tab="deepdive">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor"/><path d="M8 8l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Deep Dive
-      </button>
-
+      <button class="nav-btn" data-tab="technical"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L1 6l2 3M9 3l2 3-2 3M7 2l-2 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Technical</button>
+      <button class="nav-btn" data-tab="behavioral"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="3.5" r="2" stroke="currentColor"/><path d="M1.5 11c0-2 2-3.5 4.5-3.5S10.5 9 10.5 11" stroke="currentColor" stroke-linecap="round"/></svg>Behavioural</button>
+      <button class="nav-btn" data-tab="situational"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Situational</button>
+      <button class="nav-btn" data-tab="deepdive"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor"/><path d="M8 8l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Deep Dive</button>
       <p class="nav-section">Intelligence</p>
-      <button class="nav-btn nav-btn--special" data-tab="bias">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor"/><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.6 2.6l.7.7M8.7 8.7l.7.7M2.6 9.4l.7-.7M8.7 3.3l.7-.7" stroke="currentColor" stroke-linecap="round"/></svg>
-        Bias Audit
-      </button>
-      <button class="nav-btn nav-btn--special" data-tab="coaching">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9l3-7 3 7M4.5 6.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Coaching
-      </button>
-      <button class="nav-btn nav-btn--special" data-tab="outreach">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2.5" width="11" height="7" rx="1" stroke="currentColor"/><path d="M.5 3.5l5.5 3.5 5.5-3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Outreach
-      </button>
-
+      <button class="nav-btn nav-btn--special" data-tab="bias"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor"/><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.6 2.6l.7.7M8.7 8.7l.7.7M2.6 9.4l.7-.7M8.7 3.3l.7-.7" stroke="currentColor" stroke-linecap="round"/></svg>Bias Audit</button>
+      <button class="nav-btn nav-btn--special" data-tab="coaching"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9l3-7 3 7M4.5 6.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Coaching</button>
+      <button class="nav-btn nav-btn--special" data-tab="outreach"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2.5" width="11" height="7" rx="1" stroke="currentColor"/><path d="M.5 3.5l5.5 3.5 5.5-3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>Outreach</button>
       <p class="nav-section">Recruitment Agent <span class="nav-new-badge">NEW</span></p>
-      <button class="nav-btn nav-btn--agent" data-tab="pipeline">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2" cy="2.5" r="1.5" stroke="currentColor"/><circle cx="2" cy="6" r="1.5" stroke="currentColor"/><circle cx="2" cy="9.5" r="1.5" stroke="currentColor"/><path d="M3.5 2.5h7M3.5 6h5M3.5 9.5h6" stroke="currentColor" stroke-linecap="round"/></svg>
-        Talent Pipeline
-      </button>
-      <button class="nav-btn nav-btn--agent" data-tab="jobgen">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor"/><path d="M3.5 4.5h5M3.5 6.5h3M7 8.5l1.5-1.5-1.5-1.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        JD Generator
-      </button>
-      <button class="nav-btn nav-btn--agent" data-tab="decision">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="5" stroke="currentColor"/></svg>
-        Hire Decision
-      </button>
+      <button class="nav-btn nav-btn--agent" data-tab="pipeline"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2" cy="2.5" r="1.5" stroke="currentColor"/><circle cx="2" cy="6" r="1.5" stroke="currentColor"/><circle cx="2" cy="9.5" r="1.5" stroke="currentColor"/><path d="M3.5 2.5h7M3.5 6h5M3.5 9.5h6" stroke="currentColor" stroke-linecap="round"/></svg>Talent Pipeline</button>
+      <button class="nav-btn nav-btn--agent" data-tab="jobgen"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor"/><path d="M3.5 4.5h5M3.5 6.5h3M7 8.5l1.5-1.5-1.5-1.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>JD Generator</button>
+      <button class="nav-btn nav-btn--agent" data-tab="decision"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="5" stroke="currentColor"/></svg>Hire Decision</button>
     </nav>
-
     <div class="sb-footer">
       <button class="new-analysis-btn" onclick="resetApp()">
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5a4.5 4.5 0 004.5 4.5 4.5 4.5 0 003.5-1.7M10 5.5A4.5 4.5 0 005.5 1 4.5 4.5 0 002 2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.5 3.5l1.5-1.5-1.5-1.5M2.5 7.5L1 9l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5a4.5 4.5 0 004.5 4.5A4.5 4.5 0 009 8.8M10 5.5A4.5 4.5 0 005.5 1 4.5 4.5 0 002 2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.5 3.5l1.5-1.5-1.5-1.5M2.5 7.5L1 9l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
         New Analysis
       </button>
     </div>
   </aside>
 
-  <!-- Results main -->
-  <div class="results-main" id="results-main">
+  <div class="results-main">
     <div class="results-topbar">
-      <div class="results-topbar-left">
+      <div>
         <h1 class="results-h1">Candidate Intelligence Report</h1>
         <p class="results-timestamp" id="results-timestamp"></p>
       </div>
@@ -420,12 +626,749 @@
     </div>
     <div class="tab-content" id="tab-content"></div>
   </div>
-
 </div>
 
-<!-- ░░░░ TOAST ░░░░ -->
-<div id="toast" class="toast" aria-live="polite"></div>
+<div id="toast" class="toast"></div>
 
-<script src="app.js"></script>
+<script>
+// ────────────────────────────────────────────────
+// PDF.JS
+// ────────────────────────────────────────────────
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────
+let uploadedFile = null;
+let analysisData = null;
+let currentTab = 'overview';
+
+// ────────────────────────────────────────────────
+// THEME
+// ────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+// ────────────────────────────────────────────────
+// SCREENS
+// ────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ────────────────────────────────────────────────
+// FILE HANDLING
+// ────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') handleFile(f);
+  else showToast('Please upload a PDF file');
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (file.size > 10 * 1024 * 1024) { showToast('File too large. Max 10 MB.'); return; }
+  uploadedFile = file;
+  document.getElementById('dz-idle').classList.add('hidden');
+  document.getElementById('dz-ready').classList.remove('hidden');
+  document.getElementById('dz-file-name').textContent = file.name;
+  document.getElementById('dz-file-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  const btn = document.getElementById('run-btn');
+  btn.disabled = false;
+  document.getElementById('run-btn-text').textContent = 'Run Full Analysis';
+}
+
+function removeFile(e) {
+  e.stopPropagation();
+  uploadedFile = null;
+  fileInput.value = '';
+  document.getElementById('dz-idle').classList.remove('hidden');
+  document.getElementById('dz-ready').classList.add('hidden');
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  document.getElementById('run-btn-text').textContent = 'Select a resume to begin';
+}
+
+// ────────────────────────────────────────────────
+// ANALYSIS FLOW
+// ────────────────────────────────────────────────
+async function startAnalysis() {
+  if (!uploadedFile) return;
+  showScreen('screen-loading');
+  animateSteps();
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  const jd = document.getElementById('jd-input').value.trim();
+  try {
+    let data;
+    if (apiKey) {
+      const text = await extractPDFText(uploadedFile);
+      data = await callGroqAPI(apiKey, text, jd);
+    } else {
+      await sleep(3200);
+      data = getMockData();
+    }
+    analysisData = data;
+    renderResults(data);
+    showScreen('screen-results');
+  } catch (err) {
+    showScreen('screen-upload');
+    const hint = document.getElementById('error-hint');
+    hint.textContent = '⚠ ' + (err.message || 'Analysis failed. Check your API key.');
+    hint.style.display = 'block';
+    setTimeout(() => { hint.style.display = 'none'; }, 6000);
+  }
+}
+
+async function extractPDFText(file) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument(ab).promise;
+  let text = '';
+  for (let i = 1; i <= Math.min(pdf.numPages, 8); i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text.trim();
+}
+
+async function callGroqAPI(apiKey, resumeText, jd) {
+  const system = `You are TalentIQ, an expert AI talent intelligence system. Analyze the resume and return ONLY valid JSON (no markdown, no prose, no backticks) following this exact schema. Be precise, critical, and avoid score inflation.
+
+SCHEMA:
+{
+  "candidate": { "name": string, "currentRole": string, "email": string, "phone": string, "location": string, "summary": string, "yearsExperience": number },
+  "scores": { "overall": number(0-100), "jdFit": number(0-100), "experience": number(0-100), "skills": number(0-100), "education": number(0-100), "formatting": number(0-100), "impact": number(0-100), "clarity": number(0-100) },
+  "skills": { "technical": string[], "soft": string[], "certifications": string[], "languages": string[] },
+  "experience": [{ "company": string, "role": string, "dates": string, "description": string }],
+  "education": [{ "institution": string, "degree": string, "dates": string }],
+  "strengths": string[],
+  "gaps": string[],
+  "impact": { "score": number(0-100), "items": string[], "summary": string },
+  "realSkills": string[],
+  "buzzwords": string[],
+  "jdMatch": { "matched": string[], "missing": string[], "summary": string },
+  "redFlags": [{ "title": string, "description": string }],
+  "questions": { "technical": [{"q":string,"intent":string}], "behavioral": [{"q":string,"intent":string}], "situational": [{"q":string,"intent":string}], "deepDive": [{"q":string,"intent":string}] },
+  "bias": { "score": number(0-10), "findings": string[], "recommendation": string },
+  "coaching": [{ "area": string, "action": string, "resource": string }],
+  "outreach": { "emailSubject": string, "emailBody": string, "linkedinMessage": string },
+  "pipeline": { "stage": string, "recommendation": string, "nextSteps": string[] },
+  "jobDescription": string,
+  "decision": { "verdict": "STRONG YES"|"YES"|"MAYBE"|"NO"|"STRONG NO", "confidence": number(0-100), "reasoning": string, "risks": string[] }
+}`;
+
+  const userMsg = `RESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jd || 'Not provided — perform general analysis.'}`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 4000,
+      temperature: 0.3,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: userMsg }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const json = await res.json();
+  const raw = json.choices[0].message.content;
+  try { return JSON.parse(raw); }
+  catch { const m = raw.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('Failed to parse AI response.'); }
+}
+
+function animateSteps() {
+  const ids = ['s1','s2','s3','s4','s5','s6'];
+  const delays = [0, 500, 1000, 1700, 2300, 2800];
+  ids.forEach((id, i) => {
+    setTimeout(() => {
+      if (i > 0) document.getElementById(ids[i-1]).classList.replace('active','done');
+      document.getElementById(id).classList.add('active');
+    }, delays[i]);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ────────────────────────────────────────────────
+// RESULTS RENDERING
+// ────────────────────────────────────────────────
+function renderResults(d) {
+  const c = d.candidate || {};
+  const s = d.scores || {};
+  // Sidebar
+  const initials = (c.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('sb-avatar').textContent = initials;
+  document.getElementById('sb-name').textContent = c.name || '—';
+  document.getElementById('sb-role').textContent = c.currentRole || '—';
+  document.getElementById('sb-score').textContent = s.overall ? s.overall+'%' : '—';
+  document.getElementById('sb-jd').textContent = s.jdFit ? s.jdFit+'%' : '—';
+  document.getElementById('sb-yrs').textContent = c.yearsExperience != null ? c.yearsExperience : '—';
+  // Timestamp
+  document.getElementById('results-timestamp').textContent = 'Generated ' + new Date().toLocaleString('en-GB', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  // Hire badge
+  const dec = (d.decision||{}).verdict||'';
+  const badge = document.getElementById('hire-badge');
+  badge.className = 'hire-badge';
+  if (dec.includes('YES')) { badge.className += ' yes'; badge.textContent = '✓ ' + dec; }
+  else if (dec === 'NO' || dec === 'STRONG NO') { badge.className += ' no'; badge.textContent = '✕ ' + dec; }
+  else if (dec) { badge.className += ' maybe'; badge.textContent = '◎ ' + dec; }
+  // Render initial tab
+  switchTab('overview');
+  // Nav
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const d = analysisData;
+  const el = document.getElementById('tab-content');
+  el.innerHTML = '';
+  el.scrollTop = 0;
+  const renders = {
+    overview: renderOverview, ats: renderATS, skills: renderSkills,
+    experience: renderExperience, analysis: renderAnalysis, impact: renderImpact,
+    realvsbuzz: renderRealVsBuzz, jdmatch: renderJDMatch, redflags: renderRedFlags,
+    technical: () => renderQuestions('technical','Technical Questions'),
+    behavioral: () => renderQuestions('behavioral','Behavioural Questions'),
+    situational: () => renderQuestions('situational','Situational Questions'),
+    deepdive: () => renderQuestions('deepDive','Deep Dive Questions'),
+    bias: renderBias, coaching: renderCoaching, outreach: renderOutreach,
+    pipeline: renderPipeline, jobgen: renderJobGen, decision: renderDecision
+  };
+  if (renders[tab]) renders[tab](d, el);
+  else el.innerHTML = '<p style="color:var(--text3);padding:40px;text-align:center">Coming soon…</p>';
+}
+
+function renderOverview(d, el) {
+  const s = d.scores||{}, c = d.candidate||{};
+  el.innerHTML = `
+    <h2 class="section-title">Overview</h2>
+    <p class="section-desc">${c.summary||'No summary available.'}</p>
+    <div class="cards-grid">
+      ${scoreCard('ATS Score', s.overall+'%', getScoreColor(s.overall), 'Overall calibrated score')}
+      ${scoreCard('JD Fit', s.jdFit+'%', getScoreColor(s.jdFit), 'Job description alignment')}
+      ${scoreCard('Experience', c.yearsExperience+' yrs', 'var(--blue)', 'Total experience')}
+      ${scoreCard('Impact', (d.impact||{}).score+'%', getScoreColor((d.impact||{}).score), 'Quantified achievements')}
+    </div>
+    <div class="overview-grid">
+      <div class="panel">
+        <div class="panel-label">Contact & Location</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${infoRow('Email', c.email||'Not listed')}
+          ${infoRow('Phone', c.phone||'Not listed')}
+          ${infoRow('Location', c.location||'Not listed')}
+          ${infoRow('Role', c.currentRole||'Not listed')}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Key Strengths</div>
+        <div class="list-items">${(d.strengths||[]).slice(0,3).map(s=>`<div class="list-item"><div class="list-item-dot" style="background:var(--green)"></div><div class="list-item-text">${s}</div></div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Score Breakdown</div>
+      ${Object.entries({
+        'Keyword Match': s.skills, 'Experience Relevance': s.experience,
+        'Education Fit': s.education, 'Formatting Quality': s.formatting,
+        'Impact Quantification': s.impact, 'Clarity & Concision': s.clarity
+      }).map(([label,val])=>scoreBar(label, val||0)).join('')}
+    </div>`;
+}
+
+function renderATS(d, el) {
+  const s = d.scores||{};
+  el.innerHTML = `
+    <h2 class="section-title">ATS Scores</h2>
+    <p class="section-desc">Six-dimensional ATS evaluation. Scores above 75 are competitive. Below 60 warrants concern.</p>
+    <div class="cards-grid">
+      ${scoreCard('Overall', s.overall+'%', getScoreColor(s.overall),'Composite ATS score')}
+      ${scoreCard('Skills', s.skills+'%', getScoreColor(s.skills),'Keyword alignment')}
+      ${scoreCard('Experience', s.experience+'%', getScoreColor(s.experience),'Relevance depth')}
+      ${scoreCard('Education', s.education+'%', getScoreColor(s.education),'Academic credentials')}
+      ${scoreCard('Formatting', s.formatting+'%', getScoreColor(s.formatting),'Parse-readiness')}
+      ${scoreCard('Impact', s.impact+'%', getScoreColor(s.impact),'Quantified outcomes')}
+    </div>
+    <div class="panel">
+      <div class="panel-label">Detailed Breakdown</div>
+      ${scoreBar('Overall ATS Score', s.overall||0)}
+      ${scoreBar('Skills & Keywords', s.skills||0)}
+      ${scoreBar('Experience Relevance', s.experience||0)}
+      ${scoreBar('Education Fit', s.education||0)}
+      ${scoreBar('Formatting Quality', s.formatting||0)}
+      ${scoreBar('Impact & Metrics', s.impact||0)}
+      ${scoreBar('Clarity & Concision', s.clarity||0)}
+      ${scoreBar('JD Fit Score', s.jdFit||0)}
+    </div>`;
+}
+
+function renderSkills(d, el) {
+  const sk = d.skills||{};
+  el.innerHTML = `
+    <h2 class="section-title">Skills Profile</h2>
+    <p class="section-desc">Skills extracted and categorised from the resume.</p>
+    <div class="panel"><div class="panel-label"><span style="color:var(--blue)">●</span> Technical Skills</div>
+      <div class="tags-wrap">${(sk.technical||[]).map(s=>`<span class="tag tag--brand">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">None detected</span>'}</div>
+    </div>
+    <div class="panel"><div class="panel-label"><span style="color:var(--green)">●</span> Soft Skills</div>
+      <div class="tags-wrap">${(sk.soft||[]).map(s=>`<span class="tag tag--green">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">None detected</span>'}</div>
+    </div>
+    <div class="two-col">
+      <div class="panel"><div class="panel-label"><span style="color:var(--amber)">●</span> Certifications</div>
+        <div class="tags-wrap">${(sk.certifications||[]).map(s=>`<span class="tag tag--amber">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">None listed</span>'}</div>
+      </div>
+      <div class="panel"><div class="panel-label"><span style="color:var(--teal)">●</span> Languages</div>
+        <div class="tags-wrap">${(sk.languages||[]).map(s=>`<span class="tag tag--teal">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">None listed</span>'}</div>
+      </div>
+    </div>`;
+}
+
+function renderExperience(d, el) {
+  const exp = d.experience||[];
+  const edu = d.education||[];
+  el.innerHTML = `
+    <h2 class="section-title">Work Experience</h2>
+    <p class="section-desc">${exp.length} role(s) detected · ${d.candidate?.yearsExperience||'?'} years total experience</p>
+    <div class="panel">
+      <div class="timeline">
+        ${exp.map(e=>`
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <div class="tl-company">${e.company||'Unknown Company'}</div>
+              <div class="tl-role">${e.role||''}</div>
+              <div class="tl-dates">${e.dates||''}</div>
+              <div class="tl-desc">${e.description||''}</div>
+            </div>
+          </div>`).join('')||'<p style="color:var(--text3)">No experience data.</p>'}
+      </div>
+    </div>
+    <h2 class="section-title" style="margin-top:8px">Education</h2>
+    <div class="panel">
+      <div class="timeline">
+        ${edu.map(e=>`
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <div class="tl-company">${e.institution||''}</div>
+              <div class="tl-role">${e.degree||''}</div>
+              <div class="tl-dates">${e.dates||''}</div>
+            </div>
+          </div>`).join('')||'<p style="color:var(--text3)">No education data.</p>'}
+      </div>
+    </div>`;
+}
+
+function renderAnalysis(d, el) {
+  el.innerHTML = `
+    <h2 class="section-title">Strengths &amp; Gaps</h2>
+    <p class="section-desc">Calibrated assessment of candidate capabilities vs. role requirements.</p>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-label" style="color:var(--green)">✓ Strengths</div>
+        <div class="list-items">${(d.strengths||[]).map(s=>`<div class="list-item"><div class="list-item-dot" style="background:var(--green)"></div><div class="list-item-text">${s}</div></div>`).join('')||'<p style="color:var(--text3);font-size:13px">None identified.</p>'}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="color:var(--red)">⚡ Gaps &amp; Weaknesses</div>
+        <div class="list-items">${(d.gaps||[]).map(g=>`<div class="list-item"><div class="list-item-dot" style="background:var(--red)"></div><div class="list-item-text">${g}</div></div>`).join('')||'<p style="color:var(--text3);font-size:13px">No gaps detected.</p>'}</div>
+      </div>
+    </div>`;
+}
+
+function renderImpact(d, el) {
+  const imp = d.impact||{};
+  el.innerHTML = `
+    <h2 class="section-title">Impact Score</h2>
+    <p class="section-desc">How well the candidate quantifies and demonstrates measurable achievements.</p>
+    <div class="panel" style="text-align:center;padding:32px">
+      <div class="big-score-num" style="color:${getScoreColor(imp.score)}">${imp.score||0}<span style="font-size:28px;color:var(--text3)">%</span></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">Impact Quantification Score</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:16px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.7">${imp.summary||''}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Quantified Achievements Detected</div>
+      <div class="list-items">${(imp.items||[]).map(item=>`<div class="list-item"><div class="list-item-dot" style="background:var(--brand)"></div><div class="list-item-text">${item}</div></div>`).join('')||'<p style="color:var(--text3);font-size:13px">No quantified achievements found.</p>'}</div>
+    </div>`;
+}
+
+function renderRealVsBuzz(d, el) {
+  el.innerHTML = `
+    <h2 class="section-title">Real Skills vs Buzzwords</h2>
+    <p class="section-desc">Distinguishing substantive skills from hollow filler language.</p>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-label" style="color:var(--green)">✓ Verified Real Skills</div>
+        <div class="tags-wrap" style="margin-top:4px">${(d.realSkills||[]).map(s=>`<span class="tag tag--green">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">None detected</span>'}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="color:var(--amber)">⚠ Buzzwords / Unverified</div>
+        <div class="tags-wrap" style="margin-top:4px">${(d.buzzwords||[]).map(s=>`<span class="tag tag--amber">${s}</span>`).join('')||'<span style="color:var(--green);font-size:13px">No buzzwords detected — great!</span>'}</div>
+      </div>
+    </div>`;
+}
+
+function renderJDMatch(d, el) {
+  const jd = d.jdMatch||{};
+  el.innerHTML = `
+    <h2 class="section-title">JD Match Analysis</h2>
+    <p class="section-desc">${jd.summary||'Alignment between resume and provided job description.'}</p>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-label" style="color:var(--green)">✓ Matched Requirements</div>
+        <div class="tags-wrap" style="margin-top:4px">${(jd.matched||[]).map(s=>`<span class="tag tag--green">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">No JD provided</span>'}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="color:var(--red)">✕ Missing Requirements</div>
+        <div class="tags-wrap" style="margin-top:4px">${(jd.missing||[]).map(s=>`<span class="tag tag--red">${s}</span>`).join('')||'<span style="color:var(--text3);font-size:13px">No JD provided</span>'}</div>
+      </div>
+    </div>`;
+}
+
+function renderRedFlags(d, el) {
+  const flags = d.redFlags||[];
+  el.innerHTML = `
+    <h2 class="section-title">Red Flags</h2>
+    <p class="section-desc">${flags.length} concern(s) detected requiring further evaluation.</p>
+    ${flags.length ? flags.map(f=>`
+      <div class="flag-card">
+        <div class="flag-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L2 13h12L8 2z" stroke="currentColor" stroke-linejoin="round"/><path d="M8 7v3" stroke="currentColor" stroke-linecap="round"/><circle cx="8" cy="12" r=".7" fill="currentColor"/></svg></div>
+        <div><div class="flag-title">${f.title||'Issue detected'}</div><div class="flag-desc">${f.description||''}</div></div>
+      </div>`).join('') : '<div class="panel" style="text-align:center;padding:32px"><div style="font-size:28px;margin-bottom:8px">✓</div><div style="color:var(--green);font-size:14px;font-weight:600">No red flags detected</div><div style="color:var(--text3);font-size:13px;margin-top:4px">This candidate\'s resume appears clean and consistent.</div></div>'}`;
+}
+
+function renderQuestions(key, title) {
+  return function(d, el) {
+    const qs = (d.questions||{})[key]||[];
+    el.innerHTML = `
+      <h2 class="section-title">${title}</h2>
+      <p class="section-desc">${qs.length} questions generated for this candidate.</p>
+      ${qs.map((q,i)=>`
+        <div class="q-card">
+          <div class="q-card-num">Q${String(i+1).padStart(2,'0')}</div>
+          <div class="q-card-text">${q.q||q}</div>
+          ${q.intent?`<div class="q-card-intent">Intent: ${q.intent}</div>`:''}
+        </div>`).join('')||'<p style="color:var(--text3)">No questions generated.</p>'}`;
+  };
+}
+
+function renderBias(d, el) {
+  const b = d.bias||{};
+  const score = b.score||0;
+  const color = score <= 2 ? 'var(--green)' : score <= 5 ? 'var(--amber)' : 'var(--red)';
+  el.innerHTML = `
+    <h2 class="section-title">Bias Audit</h2>
+    <p class="section-desc">Ethical evaluation of resume language and potential PII exposure.</p>
+    <div class="panel" style="text-align:center;padding:28px">
+      <div class="big-score-num" style="color:${color}">${score}<span style="font-size:28px;color:var(--text3)">/10</span></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">Bias Risk Score (lower = better)</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Findings</div>
+      <div class="list-items">${(b.findings||[]).map(f=>`<div class="list-item"><div class="list-item-dot" style="background:var(--amber)"></div><div class="list-item-text">${f}</div></div>`).join('')||'<p style="color:var(--green);font-size:13px">No bias indicators found.</p>'}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Recommendation</div>
+      <p style="font-size:13.5px;color:var(--text2);line-height:1.7">${b.recommendation||'No recommendation available.'}</p>
+    </div>`;
+}
+
+function renderCoaching(d, el) {
+  const coaching = d.coaching||[];
+  el.innerHTML = `
+    <h2 class="section-title">Coaching Roadmap</h2>
+    <p class="section-desc">Personalised upskilling recommendations based on identified gaps.</p>
+    ${coaching.map((c,i)=>`
+      <div class="panel">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--brand);background:var(--brand-bg);padding:3px 8px;border-radius:4px">STEP ${i+1}</span>
+          <span style="font-size:13.5px;font-weight:600">${c.area||''}</span>
+        </div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px">${c.action||''}</p>
+        ${c.resource?`<span class="tag tag--teal" style="font-size:11.5px">📚 ${c.resource}</span>`:''}
+      </div>`).join('')||'<p style="color:var(--text3)">No coaching data available.</p>'}`;
+}
+
+function renderOutreach(d, el) {
+  const o = d.outreach||{};
+  el.innerHTML = `
+    <h2 class="section-title">Outreach Templates</h2>
+    <p class="section-desc">AI-crafted personalised outreach messages for this candidate.</p>
+    <div style="margin-bottom:16px">
+      <div class="panel-label" style="margin-bottom:10px">Email</div>
+      <div class="outreach-block">
+        <div class="outreach-header">
+          <span>Subject: ${o.emailSubject||'Interview Invitation'}</span>
+          <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(o.emailBody||'')}')">Copy</button>
+        </div>
+        <div class="outreach-body">${(o.emailBody||'No email template generated.').replace(/\n/g,'<br>')}</div>
+      </div>
+    </div>
+    <div>
+      <div class="panel-label" style="margin-bottom:10px">LinkedIn Message</div>
+      <div class="outreach-block">
+        <div class="outreach-header">
+          <span>LinkedIn DM</span>
+          <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(o.linkedinMessage||'')}')">Copy</button>
+        </div>
+        <div class="outreach-body">${(o.linkedinMessage||'No LinkedIn template generated.').replace(/\n/g,'<br>')}</div>
+      </div>
+    </div>`;
+}
+
+function renderPipeline(d, el) {
+  const p = d.pipeline||{};
+  el.innerHTML = `
+    <h2 class="section-title">Talent Pipeline</h2>
+    <p class="section-desc">Recommended placement in your recruitment workflow.</p>
+    <div class="panel">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span style="font-size:13px;color:var(--text2)">Current stage:</span>
+        <span class="tag tag--brand" style="font-size:13px">${p.stage||'Not assessed'}</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--text2);line-height:1.7;margin-bottom:16px">${p.recommendation||''}</p>
+      <div class="panel-label">Recommended Next Steps</div>
+      <div class="list-items">${(p.nextSteps||[]).map((s,i)=>`<div class="list-item"><div class="list-item-dot" style="background:var(--brand)"></div><div class="list-item-text"><strong>Step ${i+1}:</strong> ${s}</div></div>`).join('')||'<p style="color:var(--text3)">No steps defined.</p>'}</div>
+    </div>`;
+}
+
+function renderJobGen(d, el) {
+  const jd = d.jobDescription||'';
+  el.innerHTML = `
+    <h2 class="section-title">JD Generator</h2>
+    <p class="section-desc">AI-generated job description based on this candidate's profile to find similar talent.</p>
+    <div class="outreach-block">
+      <div class="outreach-header">
+        <span>Generated Job Description</span>
+        <button class="copy-btn" onclick="copyText(this,'${encodeURIComponent(jd)}')">Copy</button>
+      </div>
+      <div class="outreach-body">${jd.replace(/\n/g,'<br>')||'No JD generated.'}</div>
+    </div>`;
+}
+
+function renderDecision(d, el) {
+  const dec = d.decision||{};
+  const v = dec.verdict||'MAYBE';
+  const cls = v.includes('YES') ? 'yes' : (v==='NO'||v==='STRONG NO') ? 'no' : 'maybe';
+  const emoji = v.includes('YES') ? '✓' : v.includes('NO') ? '✕' : '◎';
+  el.innerHTML = `
+    <h2 class="section-title">Hire Decision</h2>
+    <p class="section-desc">AI-powered hiring recommendation with confidence score and risk analysis.</p>
+    <div class="decision-card">
+      <div class="decision-header ${cls}">
+        <div class="decision-verdict">${emoji} ${v}</div>
+        <div class="decision-conf">Confidence: ${dec.confidence||0}%</div>
+      </div>
+      <div class="decision-body">
+        <div class="panel-label">Reasoning</div>
+        <p class="decision-reasoning">${dec.reasoning||'No reasoning provided.'}</p>
+        ${(dec.risks||[]).length ? `
+          <div class="panel-label" style="color:var(--amber)">⚠ Risks to Consider</div>
+          <div class="list-items">${dec.risks.map(r=>`<div class="list-item"><div class="list-item-dot" style="background:var(--amber)"></div><div class="list-item-text">${r}</div></div>`).join('')}</div>
+        ` : ''}
+      </div>
+    </div>`;
+}
+
+// ────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────
+function scoreCard(label, val, color, sub) {
+  return `<div class="stat-card"><div class="stat-card-label">${label}</div><div class="stat-card-val" style="color:${color}">${val}</div><div class="stat-card-sub">${sub||''}</div></div>`;
+}
+function scoreBar(label, val) {
+  const color = getScoreColor(val);
+  return `<div class="score-bar-row"><div class="score-bar-label">${label}</div><div class="score-bar-track"><div class="score-bar-fill" style="width:${val}%;background:${color}"></div></div><div class="score-bar-val">${val}%</div></div>`;
+}
+function infoRow(label, val) {
+  return `<div style="display:flex;gap:10px;align-items:baseline"><span style="font-size:11.5px;font-weight:600;color:var(--text3);min-width:70px;text-transform:uppercase;letter-spacing:.04em">${label}</span><span style="font-size:13px;color:var(--text)">${val}</span></div>`;
+}
+function getScoreColor(n) {
+  if (!n && n !== 0) return 'var(--text2)';
+  if (n >= 80) return 'var(--green)';
+  if (n >= 65) return 'var(--brand2)';
+  if (n >= 50) return 'var(--amber)';
+  return 'var(--red)';
+}
+function copyText(btn, encoded) {
+  navigator.clipboard.writeText(decodeURIComponent(encoded)).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ────────────────────────────────────────────────
+// TOAST
+// ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ────────────────────────────────────────────────
+// RESET
+// ────────────────────────────────────────────────
+function resetApp() {
+  uploadedFile = null;
+  analysisData = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('dz-idle').classList.remove('hidden');
+  document.getElementById('dz-ready').classList.add('hidden');
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn-text').textContent = 'Select a resume to begin';
+  document.getElementById('jd-input').value = '';
+  ['s1','s2','s3','s4','s5','s6'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+  });
+  showScreen('screen-upload');
+}
+
+// ────────────────────────────────────────────────
+// MOCK DATA
+// ────────────────────────────────────────────────
+function getMockData() {
+  return {
+    candidate: { name: "Alexandra Chen", currentRole: "Senior Full Stack Engineer", email: "a.chen@techcorp.io", phone: "+1 (415) 555-0194", location: "San Francisco, CA", summary: "Accomplished full-stack engineer with 7 years of experience building and scaling high-traffic web applications. Expert in React, Node.js, and cloud-native architectures, with a strong track record of leading cross-functional teams and delivering measurable business outcomes.", yearsExperience: 7 },
+    scores: { overall: 84, jdFit: 79, experience: 88, skills: 82, education: 74, formatting: 91, impact: 76, clarity: 87 },
+    skills: {
+      technical: ["React", "TypeScript", "Node.js", "GraphQL", "PostgreSQL", "Redis", "AWS", "Docker", "Kubernetes", "Python", "Next.js", "Terraform"],
+      soft: ["Team Leadership", "Technical Communication", "Agile/Scrum", "Mentoring", "Stakeholder Management"],
+      certifications: ["AWS Solutions Architect – Associate", "Google Cloud Professional Developer"],
+      languages: ["English (Native)", "Mandarin (Conversational)"]
+    },
+    experience: [
+      { company: "Stripe Inc.", role: "Senior Software Engineer", dates: "2021 – Present", description: "Led a team of 6 engineers to rebuild Stripe's merchant dashboard, reducing page load time by 62% and increasing daily active users by 41%. Architected a real-time notification system processing 2M+ events/day using Kafka and Redis." },
+      { company: "Airbnb", role: "Software Engineer II", dates: "2019 – 2021", description: "Built key features for Airbnb's search and discovery platform. Contributed to a booking conversion optimisation initiative that increased revenue by $4.2M annually. Wrote comprehensive test suites achieving 94% coverage." },
+      { company: "Pivotal Labs", role: "Software Engineer", dates: "2017 – 2019", description: "Delivered full-stack features for enterprise clients across FinTech and HealthTech verticals. Introduced pair programming practices that reduced defect rates by 30%." }
+    ],
+    education: [
+      { institution: "UC Berkeley", degree: "BSc Computer Science", dates: "2013 – 2017" }
+    ],
+    strengths: ["Quantified, high-impact experience at top-tier companies (Stripe, Airbnb)", "Deep technical breadth across frontend, backend, and infrastructure", "Strong leadership track record managing teams of 5–8 engineers", "Excellent formatting with clear, consistent structure throughout"],
+    gaps: ["Limited mention of mobile development experience", "No formal management title despite leadership responsibilities", "Machine learning/AI skills not evident — increasingly important for senior IC roles", "No open source contributions or public portfolio linked"],
+    impact: {
+      score: 76,
+      summary: "Strong quantification of business impact. Candidate demonstrates a pattern of linking technical work to measurable outcomes — a sign of senior-level thinking.",
+      items: ["Reduced dashboard load time by 62% at Stripe", "Increased DAU by 41% post-rebuild", "Contributed to $4.2M annual revenue uplift at Airbnb", "Achieved 94% test coverage on core booking platform", "Reduced defect rates by 30% through pair programming adoption"]
+    },
+    realSkills: ["React", "TypeScript", "Node.js", "PostgreSQL", "AWS", "Docker", "Kubernetes", "GraphQL", "System Design", "Technical Leadership"],
+    buzzwords: ["Passionate", "Synergistic", "Dynamic team player", "Results-driven", "Thought leader"],
+    jdMatch: { matched: ["React", "TypeScript", "Node.js", "AWS", "System Design", "Team Leadership", "CI/CD", "Agile"], missing: ["Go / Golang", "Machine Learning APIs", "Spark / Data Pipelines", "Mobile (iOS/Android)"], summary: "Strong alignment with core engineering requirements. Gaps exist in data engineering and mobile — verify whether these are critical path skills for this role." },
+    redFlags: [
+      { title: "Employment gap (8 months)", description: "Unexplained gap between Pivotal Labs and Airbnb (June–Jan 2018–2019). Should be clarified in screening — may indicate a failed founding attempt, personal circumstances, or a misrepresentation." },
+      { title: "Rapid company transitions early career", description: "3 companies in 5 years. While the progression is upward, interviewers should probe for reasons behind each move to identify patterns." }
+    ],
+    questions: {
+      technical: [
+        { q: "Walk me through how you designed the real-time notification system at Stripe. What tradeoffs did you consider between Kafka, RabbitMQ, and a managed service like AWS SNS?", intent: "Assesses architectural decision-making and depth of distributed systems knowledge." },
+        { q: "You mentioned a 62% reduction in page load time. What was your methodology — how did you measure baseline, identify bottlenecks, and validate improvements in production?", intent: "Tests performance debugging rigour and production safety practices." },
+        { q: "Describe your experience with Kubernetes at scale. What's the hardest production incident you've debugged in a containerised environment?", intent: "Evaluates hands-on K8s expertise beyond surface-level deployment." },
+        { q: "How do you approach database schema design when you expect 10× traffic growth in 12 months? Walk me through a real example.", intent: "Assesses forward-thinking scalability planning with PostgreSQL/Redis." },
+        { q: "Explain the GraphQL architecture choices you've made. When would you choose REST over GraphQL and why?", intent: "Tests genuine API design expertise vs. resume keyword padding." }
+      ],
+      behavioral: [
+        { q: "Tell me about a time you disagreed with a product decision at Stripe. How did you handle it and what was the outcome?", intent: "Evaluates conflict resolution and ability to influence without authority." },
+        { q: "Describe a situation where you had to mentor someone who was significantly underperforming. What approach did you take?", intent: "Tests leadership maturity and coaching capability." },
+        { q: "Give me an example of a project where you had to significantly change direction mid-execution. How did you manage the team through that change?", intent: "Assesses adaptability and change management at a team level." },
+        { q: "Tell me about the most complex cross-functional initiative you've led. How did you align engineering, product, and design priorities?", intent: "Tests stakeholder management and cross-functional collaboration." }
+      ],
+      situational: [
+        { q: "You're 2 weeks from a major release and your tech lead just resigned. How do you respond?", intent: "Tests crisis management, delegation, and prioritisation under pressure." },
+        { q: "A junior engineer on your team pushes a breaking change to production at 4pm on a Friday. Walk me through your response — immediate and long-term.", intent: "Evaluates incident response leadership and post-mortem culture." },
+        { q: "Your PM wants to ship a feature in 3 weeks that engineering estimates at 8 weeks. How do you navigate this?", intent: "Assesses scope negotiation and expectation management skills." }
+      ],
+      deepDive: [
+        { q: "Looking at your career progression from Pivotal → Airbnb → Stripe — what deliberate choices drove each transition? Were any reactive rather than planned?", intent: "Reveals career intentionality vs. opportunistic jumps." },
+        { q: "What's a technical decision you made at Airbnb that you'd make differently today, and why?", intent: "Tests intellectual honesty and growth mindset." },
+        { q: "How do you stay technically sharp as you move into more senior/leadership roles? Give me a concrete recent example.", intent: "Evaluates whether candidate maintains IC credibility alongside growing leadership scope." },
+        { q: "Where do you see your career in 3 years — IC track or management track? What would push you to make that choice?", intent: "Assesses long-term trajectory alignment with the role's growth path." }
+      ]
+    },
+    bias: {
+      score: 2,
+      findings: ["Photo not included — good practice for blind screening", "Resume does not include nationality, gender, or age markers", "Language is largely neutral; minor use of gendered adjectives ('assertive leadership')"],
+      recommendation: "This resume presents a low bias risk. Minor review of adjective choices recommended for gender-neutral language. No PII concerns beyond standard contact information."
+    },
+    coaching: [
+      { area: "Machine Learning & AI Integration", action: "Build practical ML skills to stay competitive at the senior IC level. Focus on ML APIs, LLM integration, and MLOps fundamentals rather than pure research.", resource: "Fast.ai Practical Deep Learning + Andrew Ng's MLOps Specialisation" },
+      { area: "Engineering Management Fundamentals", action: "If pursuing the management track, formalise leadership skills beyond team lead experience. Study performance conversations, hiring loops, and OKR frameworks.", resource: "Will Larson's 'An Elegant Puzzle' + Lara Hogan's Management Coaching Resources" },
+      { area: "Public Portfolio & OSS Contribution", action: "Create a public GitHub presence and contribute to 1–2 open source projects. This significantly strengthens applications at FAANG and top-tier startups.", resource: "Good First Issues (goodfirstissue.dev) + Personal project on GitHub Pages" },
+      { area: "Mobile Development Exposure", action: "If mobile is a job requirement gap, invest 6–8 weeks in React Native fundamentals. Existing React knowledge transfers ~70% of the core concepts.", resource: "React Native official docs + Expo course on Udemy" }
+    ],
+    outreach: {
+      emailSubject: "Senior Engineer Role at [Company] — Your Stripe Experience Caught Our Eye",
+      emailBody: `Hi Alexandra,
+
+I came across your profile and was genuinely impressed by the work you led at Stripe — reducing load times by 62% while growing DAU by 41% is exactly the kind of impact-driven engineering we look for.
+
+We're building out our platform engineering team at [Company] and have a Senior Full Stack role that I think could be a strong match for where you're headed next.
+
+A few things that stood out:
+• Your experience with high-scale distributed systems (Kafka, Redis, K8s)
+• Your track record of technical leadership without a formal management title
+• The depth of your AWS and cloud-native architecture background
+
+Would you be open to a 30-minute exploratory call this week or next? No pressure — just a conversation to see if there's a fit worth exploring.
+
+Best,
+[Your Name]`,
+      linkedinMessage: `Hi Alexandra — your engineering work at Stripe (that load time reduction is no joke 🚀) caught my eye. We're scaling our platform team at [Company] and I think you'd be a great fit. Would love to share more if you're open to a quick chat?`
+    },
+    pipeline: {
+      stage: "Phone Screen",
+      recommendation: "Move to phone screen immediately. Strong profile with verified impact at top-tier companies. Prioritise clarifying the 8-month employment gap and probing depth of Kubernetes experience before advancing to technical rounds.",
+      nextSteps: ["Schedule 30-min recruiter screen within 3 business days", "Confirm seniority level alignment (IC5 vs IC6)", "Request GitHub profile or portfolio samples", "Prepare system design take-home if gap requires validation", "Brief hiring manager on candidate background before loop"]
+    },
+    jobDescription: `Senior Full Stack Engineer
+
+About the Role
+We're looking for a Senior Full Stack Engineer to join our platform team and own high-impact, customer-facing systems. You'll bring senior-level technical judgment, a bias for measurable outcomes, and the ability to lead without a formal title.
+
+Key Responsibilities
+• Design and build scalable web applications serving millions of users
+• Lead technical architecture discussions and drive cross-functional alignment
+• Mentor junior and mid-level engineers through code reviews and design sessions
+• Partner with Product and Design to define and execute on the roadmap
+• Own quality, reliability, and performance of your systems in production
+
+Requirements
+• 5+ years of full-stack engineering experience
+• Expert proficiency in React, TypeScript, and Node.js
+• Strong backend and API design skills (REST/GraphQL)
+• Experience with cloud infrastructure (AWS preferred)
+• Track record of measurable, production-scale impact
+
+Nice to Have
+• Experience with distributed systems and event streaming
+• Exposure to ML/AI API integration
+• Prior experience in FinTech or high-scale consumer products`,
+    decision: {
+      verdict: "STRONG YES",
+      confidence: 88,
+      reasoning: "Alexandra Chen presents a compelling profile with verified, quantified impact at two highly reputable companies (Stripe, Airbnb). Her technical depth across the full stack is evidenced by specific, measurable achievements rather than generic claims. Leadership experience managing a team of 6 without a formal title suggests she operates above her level — a positive signal for senior IC roles. Minor concerns around the employment gap and absence of ML exposure are addressable in screening and do not materially weaken the candidacy.",
+      risks: ["Employment gap (~8 months) requires explanation before advancing to offer stage", "Limited ML/AI exposure may be a gap if the role involves AI product development", "Top-tier company background may create compensation expectation misalignment", "No public portfolio or OSS work to independently verify code quality"]
+    }
+  };
+}
+</script>
 </body>
 </html>

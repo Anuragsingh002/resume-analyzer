@@ -16,13 +16,33 @@ async def lifespan(app: FastAPI):
     print("✅ All 10 AI Pillars ready")
     yield
 
-app = FastAPI(title="TalentIQ API", version="2.0.0", lifespan=lifespan)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ─────────────────────────────────────────────────────────────
+# CORS FIX
+# The original code had allow_origins=["*"] + allow_credentials=True
+# which is INVALID per the browser CORS spec and silently blocks
+# every single request from your Netlify frontend.
+#
+# Fix: list your Netlify URL explicitly.
+
+# ─────────────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
     "https://resume-atsc.netlify.app",
     "http://localhost:3000",
     "http://localhost:8000",
-    "http://127.0.0.1:5500",
+    "http://127.0.0.1:5500",           # VS Code Live Server
 ]
 
 app.add_middleware(
@@ -32,6 +52,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Pydantic Models ────────────────────────────────────────
 
 class OutreachRequest(BaseModel):
     profile: dict
@@ -46,13 +68,27 @@ class FeedbackRequest(BaseModel):
 class SkillAdjacencyRequest(BaseModel):
     profile: dict
 
+# ─── Routes ─────────────────────────────────────────────────
+
 @app.get("/")
 async def root():
-    return {"product": "TalentIQ", "version": "2.0", "status": "operational", "pillars": 10}
+    return {
+        "product": "TalentIQ",
+        "version": "2.0",
+        "status": "operational",
+        "pillars": 10
+    }
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "engine": "TalentIQ v2.0", "model": "llama-3.3-70b-versatile"}
+    # Used by the frontend to detect Render cold-start wake-up.
+    # The frontend polls this every 3 seconds before sending
+    # the real /analyze request.
+    return {
+        "status": "healthy",
+        "engine": "TalentIQ v2.0",
+        "model": "llama-3.3-70b-versatile"
+    }
 
 @app.post("/analyze")
 async def analyze_resume(
@@ -61,34 +97,35 @@ async def analyze_resume(
 ):
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large. Max 10MB.")
+
     resume_text = extract_text_from_pdf(content)
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
 
-    # ✅ FIXED: was analyzer.analyze() — that returns only raw dict, not the
-    # full report the frontend needs. full_analysis() returns all 4 sections:
-    # analysis, interview_questions, bias_report, candidate_feedback
-    result = analyzer.full_analysis(resume_text, job_description)
+    result = analyzer.analyze(resume_text, job_description)
     return result
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):
-    # ✅ FIXED: was generate_outreach_email() — correct name is generate_outreach()
-    result = analyzer.generate_outreach(req.profile, req.job_title, req.company_name)
+    result = analyzer.generate_outreach_email(
+        req.profile, req.job_title, req.company_name
+    )
     return result
 
 @app.post("/generate-feedback-letter")
 async def generate_feedback_letter(req: FeedbackRequest):
-    result = analyzer.generate_feedback_letter(req.profile, req.decision, req.job_title)
+    result = analyzer.generate_feedback_letter(
+        req.profile, req.decision, req.job_title
+    )
     return result
 
 @app.post("/skill-adjacency")
 async def skill_adjacency(req: SkillAdjacencyRequest):
-    # ✅ FIXED: was assess_skill_adjacency() — correct name is skill_adjacency()
-    result = analyzer.skill_adjacency(req.profile)
+    result = analyzer.assess_skill_adjacency(req.profile)
     return result
 
 if __name__ == "__main__":

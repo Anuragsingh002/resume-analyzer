@@ -16,38 +16,16 @@ async def lifespan(app: FastAPI):
     print("✅ All 10 AI Pillars ready")
     yield
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://resume-atsc.netlify.app"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ─────────────────────────────────────────────────────────────
-# CORS FIX
-# The original code had allow_origins=["*"] + allow_credentials=True
-# which is INVALID per the browser CORS spec and silently blocks
-# every single request from your Netlify frontend.
-#
-# Fix: list your Netlify URL explicitly.
-
-# ─────────────────────────────────────────────────────────────
-ALLOWED_ORIGINS = [
-    "https://resume-atsc.netlify.app",
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:5500",           # VS Code Live Server
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=[
+        "https://resume-atsc.netlify.app",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:5500",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,9 +59,6 @@ async def root():
 
 @app.get("/health")
 async def health():
-    # Used by the frontend to detect Render cold-start wake-up.
-    # The frontend polls this every 3 seconds before sending
-    # the real /analyze request.
     return {
         "status": "healthy",
         "engine": "TalentIQ v2.0",

@@ -1169,4 +1169,8 @@ function showToast(msg, type='') {
   t.className   = 'toast ' + type;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), type==='error'?5000:2800);
+  // Keep Render server warm — ping every 14 minutes
+setInterval(async () => {
+  try { await fetch('https://resume-analyzer-6wj1.onrender.com/health'); } catch(_) {}
+}, 14 * 60 * 1000);
 }

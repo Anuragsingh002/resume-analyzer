@@ -1,1066 +1,1172 @@
+/* ═══════════════════════════════════════════════════════════
+   TALENTIQ v7.0 — app.js
+   Apex Recruitment Intelligence · Real API + Agent
+═══════════════════════════════════════════════════════════ */
 'use strict';
-/* ═══════════════════════════════════════════
-   TalentIQ v3.0 — Application Logic
-   ═══════════════════════════════════════════ */
 
 const API = 'https://resume-analyzer-6wj1.onrender.com';
-const $ = id => document.getElementById(id);
 
-let resumeFile = null;
-let reportData = null;
+// ── State ──────────────────────────────────────────────────
+let currentTab   = 'overview';
+let resumeFile   = null;
+let reportData   = null;
+let agentHistory = [];
 
-/* ─────────────────────────────────────────────
-   CURSOR GLOW
-───────────────────────────────────────────── */
-document.addEventListener('mousemove', e => {
-  const g = $('cursor-glow');
-  if (g) {
-    g.style.left = e.clientX + 'px';
-    g.style.top  = e.clientY + 'px';
-  }
-});
-
-/* ─────────────────────────────────────────────
-   THEME
-───────────────────────────────────────────── */
+// ── Theme ──────────────────────────────────────────────────
 function toggleTheme() {
   const html = document.documentElement;
-  const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
-  html.dataset.theme = next;
-  localStorage.setItem('tiq-theme', next);
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('tiq-theme', html.dataset.theme);
 }
-(function initTheme() {
-  const saved = localStorage.getItem('tiq-theme') || 'dark';
-  document.documentElement.dataset.theme = saved;
+(function() {
+  document.documentElement.dataset.theme = localStorage.getItem('tiq-theme') || 'dark';
 })();
 
-/* ─────────────────────────────────────────────
-   SCREEN MANAGER
-───────────────────────────────────────────── */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-  const el = $(id);
-  el.style.display = id === 'screen-results' ? 'flex' : 'flex';
-  requestAnimationFrame(() => el.classList.add('active'));
-}
-
-/* ─────────────────────────────────────────────
-   FILE HANDLING
-───────────────────────────────────────────── */
-const dropZone = $('drop-zone');
-const fileInput = $('file-input');
-
-dropZone.addEventListener('click', e => {
-  if (!e.target.classList.contains('dz-browse') && e.target.id !== 'dz-remove') {
-    fileInput.click();
-  }
+// ── File Handling ──────────────────────────────────────────
+document.getElementById('resume-file').addEventListener('change', function() {
+  if (this.files[0]) setFile(this.files[0]);
 });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', e => {
-  if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('over');
-});
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('over');
-  const f = e.dataTransfer.files[0];
-  if (f?.type === 'application/pdf') setFile(f);
-  else toast('Only PDF files are accepted.', 'err');
-});
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) setFile(e.target.files[0]);
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
 });
 
 function setFile(f) {
   resumeFile = f;
-  $('dz-idle').classList.add('hidden');
-  $('dz-ready').classList.remove('hidden');
-  $('dz-file-name').textContent = f.name;
-  const btn = $('run-btn');
-  btn.disabled = false;
-  $('run-btn-text').textContent = 'Run full intelligence analysis';
-  btn.style.animation = 'none';
-  requestAnimationFrame(() => btn.style.animation = '');
+  document.getElementById('file-name').textContent = f.name;
+  document.getElementById('file-preview').classList.add('show');
+}
+function clearFile() {
+  resumeFile = null;
+  document.getElementById('resume-file').value = '';
+  document.getElementById('file-preview').classList.remove('show');
 }
 
-function removeFile() {
-  resumeFile = null;
-  fileInput.value = '';
-  $('dz-ready').classList.add('hidden');
-  $('dz-idle').classList.remove('hidden');
-  $('run-btn').disabled = true;
-  $('run-btn-text').textContent = 'Select a resume to begin';
+// ── Analysis Flow ──────────────────────────────────────────
+async function startAnalysis() {
+  if (!resumeFile) { showToast('Please upload a resume first', 'error'); return; }
+  showScreen('loading');
+
+  const stages = document.querySelectorAll('#loading-stages .stage');
+  stages.forEach(s => s.classList.remove('active', 'done'));
+  let si = 0;
+  function nextStage() {
+    if (si > 0 && stages[si-1]) { stages[si-1].classList.remove('active'); stages[si-1].classList.add('done'); }
+    if (si < stages.length) { stages[si].classList.add('active'); si++; }
+    updateBar(Math.round((si / stages.length) * 68));
+  }
+  nextStage();
+  const stageTimer = setInterval(() => { if (si < stages.length) nextStage(); else clearInterval(stageTimer); }, 6500);
+
+  const title = document.getElementById('loading-title');
+  const sub   = document.getElementById('loading-sub');
+
+  try {
+    title.textContent = 'Connecting to Intelligence Server\u2026';
+    sub.textContent   = 'First request may take up to 60s on free tier';
+    await wakeUpServer();
+
+    title.textContent = 'Analyzing Candidate\u2026';
+    sub.textContent   = '6 AI pillars active — semantic parsing in progress';
+
+    const fd = new FormData();
+    fd.append('file', resumeFile);
+    const jd = document.getElementById('jd-input').value.trim();
+    const rl = document.getElementById('role-input').value.trim();
+    const co = document.getElementById('company-input').value.trim();
+    if (jd) fd.append('job_description', jd);
+    if (rl) fd.append('target_role', rl);
+    if (co) fd.append('company_name', co);
+
+    updateBar(78);
+    const res = await fetch(`${API}/analyze`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${res.status}`);
+    }
+
+    reportData = await res.json();
+    agentHistory = [];
+    clearInterval(stageTimer);
+    stages.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    updateBar(100);
+
+    await sleep(500);
+    populateResultsHeader();
+    showScreen('results');
+    switchTab('overview');
+
+  } catch (err) {
+    clearInterval(stageTimer);
+    showScreen('upload');
+    const msg = (!err.message || err.message === 'Failed to fetch')
+      ? 'Cannot reach server. Check your internet connection and try again.'
+      : err.message;
+    showToast(msg, 'error');
+  }
+}
+
+function updateBar(pct) {
+  const bar = document.getElementById('loading-bar');
+  if (bar) bar.style.width = pct + '%';
+}
+
+async function wakeUpServer(maxMs = 90000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 25000);
+      const r    = await fetch(`${API}/health`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r.ok) return;
+    } catch (_) {}
+    await sleep(3000);
+  }
+  throw new Error('Server did not respond within 90 seconds.');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
 }
 
 function resetApp() {
-  removeFile();
-  reportData = null;
-  $('jd-input').value = '';
-  showScreen('screen-upload');
+  clearFile();
+  reportData = null; agentHistory = [];
+  ['jd-input','role-input','company-input'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  showScreen('upload');
 }
 
-/* ─────────────────────────────────────────────
-   ANALYSIS PIPELINE
-───────────────────────────────────────────── */
-async function startAnalysis() {
-  if (!resumeFile) return;
-  showScreen('screen-loading');
+// ── Populate Results Header ────────────────────────────────
+function populateResultsHeader() {
+  const a     = A();
+  const name  = a.candidate_name || '—';
+  const role  = a.current_role || a.experience_level || '—';
+  const score = a.overall_score || 0;
+  const rec   = (a.hire_recommendation || '').trim();
 
-  const stepIds = ['ls1','ls2','ls3','ls4','ls5','ls6'];
-  stepIds.forEach(id => { const el = $(id); el.classList.remove('active','done'); });
+  const initials = name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() || '?';
+  document.getElementById('r-avatar').textContent  = initials;
+  document.getElementById('r-name').textContent    = name;
+  document.getElementById('r-role').textContent    = role;
+  document.getElementById('r-score-num').textContent = score;
 
-  let cur = 0;
-  function advance() {
-    if (cur > 0) {
-      const prev = $(stepIds[cur - 1]);
-      prev.classList.remove('active');
-      prev.classList.add('done');
-    }
-    if (cur < stepIds.length) {
-      $(stepIds[cur]).classList.add('active');
-      cur++;
-    }
-  }
-  advance();
-  const delays = [3500, 9000, 15000, 21000, 27000];
-  const timers = delays.map((d, i) => setTimeout(advance, d));
-
-  try {
-    const fd = new FormData();
-    fd.append('file', resumeFile);
-    const jd = $('jd-input').value.trim();
-    if (jd) fd.append('job_description', jd);
-
-    const res = await fetch(`${API}/analyze`, { method: 'POST', body: fd });
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.detail || `Server error ${res.status}`);
-    }
-    reportData = await res.json();
-
-    timers.forEach(clearTimeout);
-    stepIds.forEach(id => { const el = $(id); el.classList.remove('active'); el.classList.add('done'); });
-    await delay(500);
-
-    buildResults(reportData);
-    showScreen('screen-results');
-  } catch (err) {
-    timers.forEach(clearTimeout);
-    showScreen('screen-upload');
-    toast(err.message || 'Analysis failed. Please try again.', 'err');
-  }
-}
-
-/* ─────────────────────────────────────────────
-   BUILD RESULTS SHELL
-───────────────────────────────────────────── */
-function buildResults(d) {
-  const a = d.analysis || {};
-
-  // Sidebar candidate
-  const initials = nameToInitials(a.candidate_name);
-  $('sb-avatar').textContent = initials;
-  $('sb-name').textContent = a.candidate_name || 'Unknown Candidate';
-  $('sb-role').textContent = a.current_role || (a.experience_level ? a.experience_level + ' Professional' : '—');
-
-  // Sidebar stats
-  $('sb-score').textContent = a.overall_score != null ? a.overall_score : '—';
-  $('sb-jd').textContent    = a.jd_match_score != null ? a.jd_match_score + '%' : 'N/A';
-  $('sb-yrs').textContent   = a.years_of_experience != null ? a.years_of_experience : '—';
-
-  // Timestamp
-  $('results-timestamp').textContent = `Generated ${new Date().toLocaleString('en-US', { dateStyle:'medium', timeStyle:'short' })}`;
-
-  // Hire badge
-  const hbEl = $('hire-badge');
-  const rec = (a.hire_recommendation || '').trim();
-  hbEl.textContent = rec || '';
-  hbEl.className = 'hire-badge ' + (
-    /strongly/i.test(rec) ? 'hb-strong' :
-    /caution/i.test(rec)  ? 'hb-caut'  :
-    /not/i.test(rec)      ? 'hb-no'    :
-    rec                   ? 'hb-rec'   : ''
+  const badge = document.getElementById('hire-badge');
+  document.getElementById('hire-label').textContent = rec || 'Pending';
+  badge.className = 'hire-badge ' + (
+    /strongly.*hire|strong.*hire/i.test(rec) ? 'strong-yes' :
+    /caution/i.test(rec)                     ? 'maybe'      :
+    /not|pass|no/i.test(rec)                 ? 'no'         : 'yes'
   );
 
-  // Nav wiring
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderTab(btn.dataset.tab);
-    });
-  });
-
-  renderTab('overview');
+  renderContactLinks(a.contact_info || {});
 }
 
-/* ─────────────────────────────────────────────
-   TAB ROUTER
-───────────────────────────────────────────── */
-function renderTab(tab) {
-  const a  = reportData?.analysis          || {};
-  const q  = reportData?.interview_questions || {};
-  const bi = reportData?.bias_report        || {};
-  const co = reportData?.candidate_feedback || {};
+// ── Contact Links — Enhanced with Twitter, Website & more ─
+function renderContactLinks(ci) {
+  const links = [];
 
-  const map = {
-    overview:    () => tabOverview(a),
-    ats:         () => tabATS(a),
-    skills:      () => tabSkills(a),
-    experience:  () => tabExperience(a),
-    analysis:    () => tabStrGaps(a),
-    jdmatch:     () => tabJDMatch(a),
-    technical:   () => tabQuestions(q.technical_questions   || [], 'Technical Questions',   'Q'),
-    behavioral:  () => tabQuestions(q.behavioral_questions  || [], 'Behavioural Questions', 'B'),
-    situational: () => tabQuestions(q.situational_questions || [], 'Situational Questions', 'S'),
-    deepdive:    () => tabDeepDive(q),
-    redflags:    () => tabRedFlags(q.red_flag_probes || [], a.red_flags || []),
-    bias:        () => tabBias(bi),
-    coaching:    () => tabCoaching(co, a),
-    outreach:    () => tabOutreach(a),
+  const makeLink = (cls, href, icon, label, isExternal) => {
+    const target = isExternal ? 'target="_blank" rel="noopener noreferrer"' : '';
+    const extIcon = isExternal ? `<svg class="ext-icon" width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M4 2H2a1 1 0 00-1 1v5a1 1 0 001 1h5a1 1 0 001-1V6M6 1h3m0 0v3m0-3L4.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
+    return `<a href="${esc(href)}" class="contact-link ${cls}" ${target} title="${esc(label)}">
+      <span class="cl-icon">${icon}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
+      ${extIcon}
+    </a>`;
   };
 
-  const html = (map[tab] || (() => '<p style="color:var(--tx3)">Coming soon.</p>'))();
-  const tc = $('tab-content');
-  tc.style.opacity = '0';
-  tc.style.transform = 'translateY(8px)';
-  tc.innerHTML = html;
+  if (ci.email)    links.push(makeLink('email',     `mailto:${ci.email}`,   icons.email(),    ci.email,              false));
+  if (ci.phone)    links.push(makeLink('phone',     `tel:${ci.phone}`,      icons.phone(),    ci.phone,              false));
+  if (ci.linkedin) links.push(makeLink('linkedin',  ci.linkedin,            icons.linkedin(), 'LinkedIn',            true));
+  if (ci.github)   links.push(makeLink('github',    ci.github,              icons.github(),   'GitHub',              true));
+  if (ci.twitter)  links.push(makeLink('twitter',   ci.twitter,             icons.twitter(),  'Twitter / X',         true));
+  if (ci.portfolio)links.push(makeLink('portfolio', ci.portfolio,           icons.web(),      'Portfolio',           true));
+  if (ci.website)  links.push(makeLink('website',   ci.website,             icons.web(),      'Website',             true));
 
-  // Animate bars after render
-  tc.querySelectorAll('[data-w]').forEach(el => {
-    el.style.width = '0%';
-  });
-
-  requestAnimationFrame(() => {
-    tc.style.transition = 'opacity .28s ease, transform .28s ease';
-    tc.style.opacity = '1';
-    tc.style.transform = 'none';
-    setTimeout(() => {
-      tc.querySelectorAll('[data-w]').forEach(el => {
-        el.style.transition = 'width 1.2s cubic-bezier(.4,0,.2,1)';
-        el.style.width = el.dataset.w;
-      });
-    }, 60);
-  });
-}
-
-/* ═══════════════════════════════════════════
-   TAB: OVERVIEW
-   ═══════════════════════════════════════════ */
-function tabOverview(a) {
-  const c  = a.contact || {};
-  const initials = nameToInitials(a.candidate_name);
-
-  // Contact links (LinkedIn, GitHub, email, portfolio, location)
-  const links = [];
-  if (c.email)     links.push(profileLink(`mailto:${c.email}`,              svgIcon('mail'),     c.email,     false));
-  if (c.linkedin)  links.push(profileLink(ensureHttp(c.linkedin),           svgIcon('linkedin'), 'LinkedIn',  true));
-  if (c.github)    links.push(profileLink(ensureHttp(c.github),             svgIcon('github'),   'GitHub',    true));
-  if (c.portfolio) links.push(profileLink(ensureHttp(c.portfolio),          svgIcon('globe'),    'Portfolio', true));
-  if (c.location)  links.push(profileLink(null,                             svgIcon('pin'),      c.location,  false));
-  if (c.phone)     links.push(profileLink(`tel:${c.phone}`,                 svgIcon('phone'),    c.phone,     false));
-
-  const kpis = [
-    { val: a.overall_score != null ? a.overall_score : '—',   lbl: 'Overall Score' },
-    { val: a.jd_match_score != null ? a.jd_match_score + '%' : 'N/A', lbl: 'JD Match' },
-    { val: a.years_of_experience != null ? a.years_of_experience : '—', lbl: 'Years Exp.' },
-    { val: a.experience_level || '—', lbl: 'Seniority' },
-  ];
-
-  return `
-  <div class="sec">
-    <div class="ov-profile">
-      <div class="ov-avatar">${initials}</div>
-      <div class="ov-identity">
-        <div class="ov-name">${esc(a.candidate_name || 'Unknown Candidate')}</div>
-        <div class="ov-role">${esc([a.current_role, a.current_company && 'at ' + a.current_company].filter(Boolean).join(' '))}</div>
-        <div class="ov-chips">
-          ${a.experience_level ? badge(a.experience_level, 'brand') : ''}
-          ${a.years_of_experience != null ? badge(a.years_of_experience + ' yrs', '') : ''}
-        </div>
-        <div class="ov-links">${links.join('')}</div>
-      </div>
-    </div>
-
-    <div class="kv-grid">
-      ${kpis.map(k => `<div class="kv-cell"><div class="kv-val">${esc(String(k.val))}</div><div class="kv-lbl">${k.lbl}</div></div>`).join('')}
-    </div>
-  </div>
-
-  ${a.professional_summary ? `
-  <div class="sec">
-    <h3 class="sec-h">Professional Summary</h3>
-    <div class="callout">${esc(a.professional_summary)}</div>
-  </div>` : ''}
-
-  ${a.unique_value_proposition ? `
-  <div class="sec">
-    <h3 class="sec-h">Unique Value Proposition</h3>
-    <p style="font-size:14px;color:var(--tx2);line-height:1.8">${esc(a.unique_value_proposition)}</p>
-  </div>` : ''}
-
-  <div class="ov-2col" style="margin-bottom:20px">
-    ${a.career_trajectory ? `<div>
-      <h3 class="sec-h">Career Trajectory</h3>
-      <p style="font-size:13.5px;color:var(--tx2);line-height:1.75;font-style:italic">${esc(a.career_trajectory)}</p>
-    </div>` : '<div></div>'}
-    ${(a.ideal_role_fit || []).length ? `<div>
-      <h3 class="sec-h">Best Role Fits</h3>
-      <div class="tags">${(a.ideal_role_fit || []).map(r => badge(r, 'brand')).join('')}</div>
-    </div>` : ''}
-  </div>
-
-  <div class="ov-2col" style="margin-bottom:20px">
-    ${(a.inferred_skills || []).length ? `<div>
-      <h3 class="sec-h">Inferred Skills</h3>
-      <p style="font-size:12px;color:var(--tx3);margin-bottom:10px">Not explicitly stated — strongly implied by experience.</p>
-      <div class="tags">${(a.inferred_skills || []).map(s => badge(s, '')).join('')}</div>
-    </div>` : ''}
-    ${(a.growth_signals || []).length ? `<div>
-      <h3 class="sec-h">Growth Signals</h3>
-      <div>${(a.growth_signals || []).map(g => `<div class="qwin-item">${esc(g)}</div>`).join('')}</div>
-    </div>` : ''}
-  </div>
-
-  ${(a.education || []).length ? `
-  <div class="sec">
-    <h3 class="sec-h">Education</h3>
-    <div class="card" style="padding:0;overflow:hidden">
-      ${(a.education || []).map((e, i) => `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 20px;${i < (a.education.length-1) ? 'border-bottom:1px solid var(--line1)' : ''}">
-        <div style="min-width:0;flex:1;padding-right:16px">
-          <div style="font-weight:600;font-size:13.5px;color:var(--tx1);margin-bottom:2px">${esc(e.degree || '')}</div>
-          <div style="font-size:13px;color:var(--brand);margin-bottom:8px">${esc(e.institution || '')}</div>
-          ${(e.relevant_coursework || []).length ? `<div class="tags">${e.relevant_coursework.map(c => badge(c, '')).join('')}</div>` : ''}
-        </div>
-        <div style="font-family:var(--fm);font-size:12px;color:var(--tx3);flex-shrink:0;white-space:nowrap">${esc(e.year || '')}</div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}
-
-  ${(a.certifications || []).length ? `
-  <div class="sec">
-    <h3 class="sec-h">Certifications</h3>
-    <div class="tags">${(a.certifications || []).map(c => badge(c, '')).join('')}</div>
-  </div>` : ''}
-
-  ${(a.projects || []).length ? `
-  <div class="sec">
-    <h3 class="sec-h">Notable Projects</h3>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      ${(a.projects || []).map(p => `
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:12px;flex-wrap:wrap">
-          <span style="font-weight:600;font-size:14px;color:var(--tx1)">${esc(p.name || '')}</span>
-          ${p.impact ? `<span style="font-family:var(--fm);font-size:11.5px;color:var(--green);flex-shrink:0">${esc(p.impact)}</span>` : ''}
-        </div>
-        <p style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:10px">${esc(p.description || '')}</p>
-        <div class="tags">${(p.technologies || []).map(t => badge(t, '')).join('')}</div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: ATS SCORES
-   ═══════════════════════════════════════════ */
-function tabATS(a) {
-  const ats = a.ats_scores || {};
-  const sc  = a.overall_score || 0;
-  const jd  = a.jd_match_score;
-  const C   = 2 * Math.PI * 44;
-
-  const rings = [
-    { val: sc, label: 'Overall Score', id: 'ring-overall', color: 'var(--brand)' },
-    ...(jd != null ? [{ val: jd, label: 'JD Match', id: 'ring-jd', color: 'var(--green)' }] : []),
-  ];
-
-  setTimeout(() => {
-    rings.forEach(r => {
-      const el = $(r.id);
-      if (!el) return;
-      el.style.strokeDasharray  = C;
-      el.style.strokeDashoffset = C;
-      requestAnimationFrame(() => setTimeout(() => {
-        el.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)';
-        el.style.strokeDashoffset = C * (1 - Math.min(r.val, 100) / 100);
-      }, 80));
-    });
-  }, 50);
-
-  const axes = [
-    { key: 'keyword_density',    name: 'Keyword Density',      sub: 'Role-relevant terms used in context' },
-    { key: 'format_quality',     name: 'Format Quality',        sub: 'Structure and ATS parseability' },
-    { key: 'experience_depth',   name: 'Experience Depth',      sub: 'Richness of detail per role' },
-    { key: 'skills_coverage',    name: 'Skills Coverage',       sub: 'Breadth of skill portfolio' },
-    { key: 'achievement_impact', name: 'Achievement Impact',    sub: 'Quantified results and outcomes' },
-    { key: 'career_progression', name: 'Career Progression',    sub: 'Growth trajectory clarity' },
-  ];
-
-  return `
-  <div class="sec">
-    <div class="ring-group">
-      ${rings.map(r => `
-      <div class="ring-block">
-        <svg viewBox="0 0 100 100" width="110" height="110" style="display:block">
-          <circle cx="50" cy="50" r="44" fill="none" stroke="var(--bg4)" stroke-width="7"/>
-          <circle id="${r.id}" cx="50" cy="50" r="44" fill="none"
-            stroke="${r.color}" stroke-width="7" stroke-linecap="round"
-            style="transform:rotate(-90deg);transform-origin:50% 50%"/>
-        </svg>
-        <div class="ring-big">${r.val}</div>
-        <div class="ring-lbl">${r.label}</div>
-      </div>`).join('')}
-      <div style="flex:1;min-width:0">
-        ${a.hire_rationale || a.professional_summary ? `<p style="font-size:13.5px;color:var(--tx2);line-height:1.8;margin-bottom:12px">${esc(a.hire_rationale || a.professional_summary)}</p>` : ''}
-        ${a.hire_recommendation ? `<div class="tags">${badge(a.hire_recommendation, /strongly/i.test(a.hire_recommendation)?'green':/caution/i.test(a.hire_recommendation)?'amber':/not/i.test(a.hire_recommendation)?'red':'brand')}</div>` : ''}
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <h3 class="sec-h">Six-Axis Breakdown</h3>
-    <div style="display:flex;flex-direction:column;gap:16px">
-      ${axes.map(ax => {
-        const v = Math.min(Math.max(ats[ax.key] ?? 0, 0), 100);
-        const cls = v >= 70 ? 'bf-green' : v >= 45 ? 'bf-amber' : 'bf-red';
-        return `<div class="bar-wrap">
-          <div class="bar-header"><span class="bar-name">${ax.name}</span><span class="bar-val">${v}%</span></div>
-          <div class="bar-track"><div class="bar-fill ${cls}" style="width:0%" data-w="${v}%"></div></div>
-          <div class="bar-sub">${ax.sub}</div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: SKILLS
-   ═══════════════════════════════════════════ */
-function tabSkills(a) {
-  const sk = a.technical_skills || {};
-  const groups = [
-    { name: 'Languages',              items: sk.languages,    cls: 'brand' },
-    { name: 'Frameworks & Libraries', items: sk.frameworks,   cls: '' },
-    { name: 'Databases',              items: sk.databases,    cls: '' },
-    { name: 'Cloud & DevOps',         items: sk.cloud_devops, cls: '' },
-    { name: 'AI / ML',                items: sk.ai_ml,        cls: 'brand' },
-    { name: 'Tools',                  items: sk.tools,        cls: '' },
-    { name: 'Other',                  items: sk.other,        cls: '' },
-    { name: 'Soft Skills',            items: a.soft_skills,   cls: '' },
-  ].filter(g => g.items?.length);
-
-  return `
-  <div class="sec">
-    <h3 class="sec-h">Technical Skills</h3>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">
-      ${groups.map(g => `
-      <div class="card">
-        <div class="card-title">${g.name}</div>
-        <div class="tags">${g.items.map(s => badge(s, g.cls)).join('')}</div>
-      </div>`).join('')}
-    </div>
-  </div>
-
-  ${(a.inferred_skills || []).length ? `
-  <div class="sec">
-    <h3 class="sec-h">Inferred Skills</h3>
-    <p style="font-size:13px;color:var(--tx3);margin-bottom:12px">Not explicitly listed — strongly implied by demonstrated experience.</p>
-    <div class="tags">${(a.inferred_skills || []).map(s => badge(s, '')).join('')}</div>
-  </div>` : ''}
-
-  ${(a.transferable_skills || []).length ? `
-  <div class="sec">
-    <h3 class="sec-h">Transferable Skills</h3>
-    <p style="font-size:13px;color:var(--tx3);margin-bottom:12px">Cross-domain capabilities that add unique value.</p>
-    <div class="tags">${(a.transferable_skills || []).map(s => badge(s, '')).join('')}</div>
-  </div>` : ''}`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: EXPERIENCE
-   ═══════════════════════════════════════════ */
-function tabExperience(a) {
-  const exps = a.work_experience || [];
-  if (!exps.length) return emptyState('No work experience found in the resume.');
-  return `
-  <div class="exp-list">
-    ${exps.map(e => `
-    <div class="exp-entry">
-      <div class="exp-tl-col">
-        <div class="exp-dot"></div>
-        <div class="exp-line"></div>
-      </div>
-      <div class="exp-card" style="padding-bottom:4px">
-        <div class="exp-header">
-          <div class="exp-title">${esc(e.role || '')}</div>
-          <div class="exp-tenure">${esc(e.duration || '')}</div>
-        </div>
-        <div class="exp-co">${esc(e.company || '')}</div>
-        ${(e.key_achievements || []).length ? `
-        <ul class="exp-ach">
-          ${e.key_achievements.map(ach => `<li>${esc(ach)}</li>`).join('')}
-        </ul>` : ''}
-        ${(e.impact_metrics || []).length ? `<div class="exp-metrics">${e.impact_metrics.map(m => badge(m, 'green')).join('')}</div>` : ''}
-        ${(e.skills_demonstrated || []).length ? `<div class="exp-skills">${e.skills_demonstrated.map(s => badge(s, 'brand')).join('')}</div>` : ''}
-      </div>
-    </div>`).join('')}
-  </div>`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: STRENGTHS & GAPS
-   ═══════════════════════════════════════════ */
-function tabStrGaps(a) {
-  const strengths = a.top_strengths  || [];
-  const gaps      = a.potential_gaps || [];
-
-  return `
-  <div class="sec">
-    <h3 class="sec-h">Top Strengths</h3>
-    <div class="sg-grid">
-      ${strengths.length ? strengths.map(s => `
-      <div class="sg-item sg-item--str">
-        <div class="sg-title">${esc(s.strength || String(s))}</div>
-        <div class="sg-body">${esc(s.evidence || '')}</div>
-        ${s.rarity ? `<div class="sg-foot">${badge(s.rarity, s.rarity==='Rare'?'brand':s.rarity==='Uncommon'?'amber':'')}</div>` : ''}
-      </div>`).join('') : `<p style="font-size:13px;color:var(--tx3)">None identified.</p>`}
-    </div>
-  </div>
-
-  <div class="sec">
-    <h3 class="sec-h">Potential Gaps</h3>
-    <div class="sg-grid">
-      ${gaps.length ? gaps.map(g => `
-      <div class="sg-item sg-item--gap">
-        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;flex-wrap:wrap">
-          <div class="sg-title" style="margin:0;flex:1">${esc(g.gap || String(g))}</div>
-          ${g.severity ? badge(g.severity, g.severity==='Critical'?'red':g.severity==='Moderate'?'amber':'') : ''}
-        </div>
-        <div class="sg-body">${esc(g.suggestion || '')}</div>
-      </div>`).join('') : `<p style="font-size:13px;color:var(--green)">No significant gaps identified.</p>`}
-    </div>
-  </div>`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: JD MATCH
-   ═══════════════════════════════════════════ */
-function tabJDMatch(a) {
-  if (a.jd_match_score == null) {
-    return `<div class="empty-st" style="max-width:460px">
-      <div style="width:56px;height:56px;border-radius:50%;background:var(--bg3);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;color:var(--tx3)">${svgIcon('search')}</div>
-      <p style="font-family:var(--fh);font-size:22px;color:var(--tx2);margin-bottom:8px">No job description provided</p>
-      <p style="font-size:13.5px;color:var(--tx3);line-height:1.75;margin-bottom:24px">Start a new analysis and paste a job description to unlock role alignment scoring, skill gap analysis, and targeted questions.</p>
-      <button onclick="resetApp()" style="background:var(--brand);color:#fff;border:none;padding:10px 24px;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fb)">Start new analysis</button>
-    </div>`;
+  // Fallback: try to parse raw text for links if no structured data
+  if (!links.length && ci.raw) {
+    const rawText = ci.raw || '';
+    const emailM = rawText.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
+    const phoneM = rawText.match(/[\+]?[\d\s\-\(\)]{10,}/);
+    const liM    = rawText.match(/linkedin\.com\/in\/[\w-]+/i);
+    const ghM    = rawText.match(/github\.com\/[\w-]+/i);
+    if (emailM) links.push(makeLink('email',    `mailto:${emailM[0]}`,           icons.email(),    emailM[0],    false));
+    if (phoneM) links.push(makeLink('phone',    `tel:${phoneM[0].replace(/\s/g,'')}`, icons.phone(), phoneM[0], false));
+    if (liM)    links.push(makeLink('linkedin', `https://${liM[0]}`,             icons.linkedin(), 'LinkedIn',   true));
+    if (ghM)    links.push(makeLink('github',   `https://${ghM[0]}`,             icons.github(),   'GitHub',     true));
   }
+
+  const el = document.getElementById('contact-links');
+  if (el) el.innerHTML = links.length
+    ? links.join('')
+    : `<span style="font-size:.7rem;color:var(--text-3);font-family:var(--font-mono)">No contact info extracted</span>`;
+}
+
+// ── Icon library ───────────────────────────────────────────
+const icons = {
+  email:    () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M.5 3.5l5.5 4 5.5-4" stroke="currentColor" stroke-linecap="round"/></svg>`,
+  phone:    () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 2h2.5l1 2.5-1.5 1a7 7 0 003.5 3.5l1-1.5L11 8.5v2.5A1 1 0 0110 12 10 10 0 010 2a1 1 0 011-1h1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>`,
+  linkedin: () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M3 5v4.5M3 3.5V4M5 9.5V7c0-1 .7-2 2-2s2 1 2 2v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
+  github:   () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 00-1.58 9.74c.25.05.34-.11.34-.24v-.87C3.06 9.9 2.76 9 2.76 9c-.23-.57-.56-.72-.56-.72-.45-.31.04-.3.04-.3.5.03.77.52.77.52.45.77 1.18.55 1.47.42.04-.33.17-.55.32-.68C3.19 8.1 2.1 7.7 2.1 5.9a1.91 1.91 0 01.51-1.33c-.05-.13-.22-.63.05-1.31 0 0 .42-.13 1.36.51a4.73 4.73 0 012.48 0c.94-.64 1.36-.51 1.36-.51.27.68.1 1.18.05 1.31a1.9 1.9 0 01.51 1.33c0 1.81-1.1 2.2-2.15 2.32.17.15.32.43.32.87v1.3c0 .13.09.29.34.24A5 5 0 006 1z" fill="currentColor"/></svg>`,
+  twitter:  () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 9.5L5 6 1 2.5h2.5L6 5l2.5-2.5H11L7 5.5l4 4H8.5L6 7l-2.5 2.5H1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>`,
+  web:      () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.1"/><path d="M6 1c-1.5 2-1.5 8 0 10M6 1c1.5 2 1.5 8 0 10M1 6h10" stroke="currentColor" stroke-width="1.1"/><path d="M2 3.5a8 8 0 008 0M2 8.5a8 8 0 008 0" stroke="currentColor" stroke-width="1.1"/></svg>`,
+};
+
+// ── Export / Copy ──────────────────────────────────────────
+function exportReport() {
+  if (!reportData) return;
+  showToast('Opening print dialog to save as PDF\u2026', '');
+  setTimeout(() => window.print(), 300);
+}
+
+function copyReport() {
+  if (!reportData) return;
+  const a = A();
+  const text = `TALENTIQ CANDIDATE INTELLIGENCE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Candidate: ${a.candidate_name || '—'}
+Role: ${a.current_role || '—'}
+ATS Score: ${a.overall_score || 0}/100
+Recommendation: ${a.hire_recommendation || '—'}
+Experience: ${a.years_of_experience || 'N/A'} years
+
+▸ STRENGTHS
+${(a.top_strengths || []).map(s => '• ' + (s.strength || s)).join('\n')}
+
+▸ GAPS
+${(a.potential_gaps || []).map(g => '• ' + (g.gap || g)).join('\n')}
+
+▸ HIRE RATIONALE
+${a.hire_rationale || '—'}
+`;
+  navigator.clipboard.writeText(text).then(() => showToast('Report copied to clipboard', 'success'));
+}
+
+// ── Tab Navigation ─────────────────────────────────────────
+document.getElementById('sb-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.nav-btn[data-tab]');
+  if (btn) switchTab(btn.dataset.tab);
+});
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#sb-nav .nav-btn').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector(`#sb-nav .nav-btn[data-tab="${tab}"]`);
+  if (active) active.classList.add('active');
+  const el = document.getElementById('tab-content');
+  el.classList.remove('anim-up');
+  void el.offsetWidth;
+  el.classList.add('anim-up');
+  el.innerHTML = (TABS[tab] ? TABS[tab]() : `<p style="color:var(--text-2)">Coming soon.</p>`);
+  animateBars();
+  bindQA();
+  if (tab === 'agent')     initAgent();
+  if (tab === 'scorecard') initScorecard();
+  document.querySelector('.r-main').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function animateBars() {
+  setTimeout(() => {
+    document.querySelectorAll('.score-ring-fill').forEach(f => {
+      const p = parseFloat(f.dataset.pct) || 0;
+      f.style.strokeDashoffset = 339.3 - (339.3 * p / 100);
+    });
+    document.querySelectorAll('[data-w]').forEach(b => { b.style.width = b.dataset.w + '%'; });
+  }, 60);
+}
+
+function bindQA() {
+  document.querySelectorAll('.qa-q').forEach(q => {
+    q.addEventListener('click', () => q.closest('.qa-item').classList.toggle('open'));
+  });
+}
+
+// ── Data Accessors ─────────────────────────────────────────
+function A()  { return (reportData && reportData.analysis)            || {}; }
+function Q()  { return (reportData && reportData.interview_questions) || {}; }
+function BI() { return (reportData && reportData.bias_report)         || {}; }
+function CO() { return (reportData && reportData.candidate_feedback)  || {}; }
+function n(val, fallback = 0) { return val != null ? val : fallback; }
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB RENDERERS
+═══════════════════════════════════════════════════════════ */
+const TABS = {
+  overview, skills, experience, analysis, impact,
+  realvsbuzz, jdmatch, redflags,
+  technical, behavioral, situational, deepdive,
+  bias, coaching, outreach,
+  agent, scorecard, pipeline, decision,
+};
+
+/* ── OVERVIEW ─────────────────────────────────────────────── */
+function overview() {
+  const a  = A();
+  const sc = n(a.overall_score);
+  const at = a.ats_scores       || {};
+  const qi = a.quantified_impact || {};
+  const cl = a.candidate_classification || {};
+  const jd = a.jd_match_score;
+
+  return `
+  <div class="section-h">Intelligence Dashboard</div>
+  <div class="section-sub">Holistic candidate fitness across all evaluation dimensions</div>
+
+  <div class="score-ring-wrap">
+    <div class="ring-wrap">
+      <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+        <circle class="score-ring-track" cx="60" cy="60" r="54"/>
+        <circle class="score-ring-fill" cx="60" cy="60" r="54" data-pct="${sc}" stroke="var(--accent)"/>
+      </svg>
+      <div class="score-ring-text">
+        <span class="score-ring-num" style="color:var(--accent)">${sc}</span>
+        <span class="score-ring-lbl">/100</span>
+      </div>
+    </div>
+    <div class="score-ring-desc">
+      <h3>Composite ATS Score</h3>
+      <p>${esc(a.professional_summary || a.hire_rationale || 'Analysis complete. Review the sections below for detailed intelligence.')}</p>
+      <div class="ring-tags">
+        ${a.hire_recommendation ? `<span class="item-badge badge-teal">${esc(a.hire_recommendation)}</span>` : ''}
+        ${a.years_of_experience != null ? `<span class="item-badge badge-blue">${a.years_of_experience} yrs exp</span>` : ''}
+        ${a.experience_level ? `<span class="item-badge badge-violet">${esc(a.experience_level)}</span>` : ''}
+        ${a.current_role ? `<span class="item-badge badge-amber">${esc(a.current_role)}</span>` : ''}
+      </div>
+    </div>
+  </div>
+
+  <div class="axis-grid">
+    ${ax('Keyword Density',    n(at.keyword_density),    'var(--blue)')}
+    ${ax('Experience Depth',   n(at.experience_depth),   'var(--accent)')}
+    ${ax('Achievement Impact', n(at.achievement_impact), 'var(--green)')}
+    ${ax('Skills Coverage',    n(at.skills_coverage),    'var(--violet)')}
+    ${ax('Format Quality',     n(at.format_quality),     'var(--amber)')}
+    ${ax('Career Progression', n(at.career_progression), 'var(--pink)')}
+  </div>
+
+  <div class="stat-stripe">
+    <div class="stat-card">
+      <div class="stat-label">JD Match</div>
+      <div class="stat-val" style="color:var(--cyan)">${jd != null ? jd + '%' : '—'}</div>
+      <div class="stat-sub">${jd != null ? (jd>=70?'Strong match':jd>=45?'Moderate match':'Weak match') : 'No JD provided'}</div>
+      <div class="stat-bar"><div class="stat-fill" style="background:var(--cyan)" data-w="${jd||0}"></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Impact Score</div>
+      <div class="stat-val" style="color:var(--green)">${n(qi.score)}</div>
+      <div class="stat-sub">${esc(qi.verdict||'—')}</div>
+      <div class="stat-bar"><div class="stat-fill" style="background:var(--green)" data-w="${n(qi.score)}"></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Candidate Type</div>
+      <div class="stat-val" style="color:var(--amber);font-size:.95rem">${esc(cl.type||'—')}</div>
+      <div class="stat-sub">${esc(cl.buzz_word_rating||'—')}</div>
+      <div class="stat-bar"><div class="stat-fill" style="background:var(--amber)" data-w="55"></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Career Velocity</div>
+      <div class="stat-val" style="color:var(--blue);font-size:.95rem">${esc(a.career_velocity||'—')}</div>
+      <div class="stat-sub">${esc((a.career_velocity_evidence||'').slice(0,55))}</div>
+      <div class="stat-bar"><div class="stat-fill" style="background:var(--blue)" data-w="65"></div></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Top Strengths</div>
+      <div class="item-list">
+        ${(a.top_strengths||[]).slice(0,4).map(s=>li('green','✓',esc(s.strength||String(s))+(s.evidence?' — <span style="color:var(--text-3)">'+esc(s.evidence)+'</span>':''))).join('') || noData()}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Key Gaps</div>
+      <div class="item-list">
+        ${(a.potential_gaps||[]).slice(0,4).map(g=>li(g.severity==='Critical'?'red':'amber',g.severity==='Critical'?'!':'~',esc(g.gap||String(g))+(g.suggestion?' — <span style="color:var(--text-3)">'+esc(g.suggestion)+'</span>':''),g.severity||'')).join('') || `<p class="nodata">✓ No significant gaps identified.</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── SKILLS ───────────────────────────────────────────────── */
+function skills() {
+  const a  = A();
+  const sk = a.technical_skills || {};
+  const GROUPS = [
+    { l:'Languages',      c:'var(--blue)',    items: sk.languages    ||[] },
+    { l:'Frameworks',     c:'var(--violet)',  items: sk.frameworks   ||[] },
+    { l:'AI / ML',        c:'var(--accent)',  items: sk.ai_ml        ||[] },
+    { l:'Cloud & DevOps', c:'var(--green)',   items: sk.cloud_devops ||[] },
+    { l:'Databases',      c:'var(--amber)',   items: sk.databases    ||[] },
+    { l:'Tools',          c:'var(--pink)',    items: sk.tools        ||[] },
+    { l:'Other',          c:'var(--text-2)',  items: sk.other        ||[] },
+    { l:'Soft Skills',    c:'var(--cyan)',    items: a.soft_skills   ||[] },
+  ].filter(g => g.items.length);
+
+  if (!GROUPS.length) return `<div class="section-h">Skills Intelligence</div><p class="nodata" style="margin-top:8px">No skills data extracted.</p>`;
+
+  return `
+  <div class="section-h">Skills Intelligence</div>
+  <div class="section-sub">Evidence-validated technical and interpersonal skills with proficiency signals</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+    ${GROUPS.map(g => `
+      <div class="card">
+        <div class="card-title">${g.l}</div>
+        <div class="skill-cloud">
+          ${g.items.map(s => `<span class="skill-tag" style="color:${g.c};border-color:${g.c.replace(')',',0.18)')}">${esc(s)}</span>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>
+  ${(a.inferred_skills||[]).length ? `
+  <div class="card" style="margin-top:11px">
+    <div class="card-title">Inferred Skills <span style="color:var(--text-3);font-size:.68em;font-weight:400;letter-spacing:0;text-transform:none">— implied by experience, not explicitly stated</span></div>
+    <div class="skill-cloud">
+      ${(a.inferred_skills||[]).map(s=>`<span class="skill-tag" style="border-style:dashed;color:var(--text-3)">${esc(s)}</span>`).join('')}
+    </div>
+  </div>` : ''}`;
+}
+
+/* ── EXPERIENCE ───────────────────────────────────────────── */
+function experience() {
+  const a    = A();
+  const exps = a.work_experience || [];
+  const edu  = a.education       || [];
+  const cert = a.certifications  || [];
+  const proj = a.projects        || [];
+
+  return `
+  <div class="section-h">Work Experience</div>
+  <div class="section-sub">Career timeline with AI-extracted achievement signals</div>
+
+  ${exps.length ? `
+  <div class="card">
+    <div class="timeline">
+      ${exps.map(e => tl(
+        esc(e.role||'—'), esc(e.company||''), esc(e.duration||''),
+        (e.key_achievements||e.impact_metrics||[]).map(x=>`• ${esc(x)}`).join('<br>')
+      )).join('')}
+    </div>
+  </div>` : `<p class="nodata" style="margin-bottom:16px">No work experience extracted.</p>`}
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Education</div>
+      ${edu.length ? `<div class="timeline">${edu.map(e=>tl(esc(e.degree||'—'),esc(e.institution||''),esc(e.year||''),'',true)).join('')}</div>` : noData()}
+    </div>
+    <div class="card">
+      <div class="card-title">Certifications</div>
+      ${cert.length ? `<div class="item-list">${cert.map(c=>li('blue','🏅',esc(c))).join('')}</div>` : noData()}
+    </div>
+  </div>
+
+  ${proj.length ? `
+  <div class="card">
+    <div class="card-title">Notable Projects</div>
+    ${proj.map((p,i)=>`
+      <div style="${i<proj.length-1?'margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)':''}">
+        <div style="font-weight:600;font-size:.87rem;margin-bottom:5px">${esc(p.name||'')}</div>
+        <p style="font-size:.79rem;color:var(--text-2);line-height:1.65;margin-bottom:8px">${esc(p.description||'')}</p>
+        <div class="skill-cloud">
+          ${(p.technologies||[]).map(t=>`<span class="skill-tag" style="color:var(--accent);font-size:.7rem;border-color:rgba(124,109,255,.2)">${esc(t)}</span>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>` : ''}`;
+}
+
+/* ── ANALYSIS ─────────────────────────────────────────────── */
+function analysis() {
+  const a = A();
+  return `
+  <div class="section-h">Strengths &amp; Gaps Analysis</div>
+  <div class="section-sub">Evidence-based assessment of candidate fitness for the target role</div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Top Strengths</div>
+    <div class="item-list">
+      ${(a.top_strengths||[]).map(s=>li('green','S',`<strong>${esc(s.strength||String(s))}</strong>${s.evidence?' — <span style="color:var(--text-3)">'+esc(s.evidence)+'</span>':''}`,s.rarity||'')).join('') || noData()}
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Potential Gaps</div>
+    <div class="item-list">
+      ${(a.potential_gaps||[]).map(g=>li(g.severity==='Critical'?'red':'amber',g.severity==='Critical'?'!':'~',`<strong>${esc(g.gap||String(g))}</strong>${g.suggestion?' — <span style="color:var(--text-3)">'+esc(g.suggestion)+'</span>':''}`,g.severity||'')).join('') || `<p class="nodata">✓ No significant gaps identified.</p>`}
+    </div>
+  </div>
+  ${a.career_trajectory ? `<div class="card" style="margin-bottom:12px"><div class="card-title">Career Trajectory</div><p style="font-size:.82rem;color:var(--text-2);line-height:1.7;font-style:italic">${esc(a.career_trajectory)}</p></div>` : ''}
+  ${(a.ideal_role_fit||[]).length ? `<div class="card"><div class="card-title">Ideal Role Fits</div><div class="skill-cloud" style="margin-top:4px">${(a.ideal_role_fit||[]).map(r=>`<span class="item-badge badge-teal">${esc(r)}</span>`).join('')}</div></div>` : ''}`;
+}
+
+/* ── IMPACT ───────────────────────────────────────────────── */
+function impact() {
+  const qi = A().quantified_impact || {};
+  const sc = n(qi.score);
+  return `
+  <div class="section-h">Impact Score</div>
+  <div class="section-sub">Quantified achievement analysis — how well the candidate proves results with hard numbers</div>
+  <div class="score-ring-wrap">
+    <div class="ring-wrap">
+      <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+        <circle class="score-ring-track" cx="60" cy="60" r="54"/>
+        <circle class="score-ring-fill" cx="60" cy="60" r="54" data-pct="${sc}" stroke="var(--green)"/>
+      </svg>
+      <div class="score-ring-text">
+        <span class="score-ring-num" style="color:var(--green)">${sc}</span>
+        <span class="score-ring-lbl">/100</span>
+      </div>
+    </div>
+    <div class="score-ring-desc">
+      <h3>Quantified Impact Score</h3>
+      <p><strong>${esc(qi.verdict||'—')}</strong> — ${n(qi.quantified_percentage)}% of resume bullets contain hard numbers (%, $, time saved, scale).</p>
+      ${qi.improvement_tip ? `<p style="margin-top:8px;font-size:.78rem;color:var(--text-2)">${esc(qi.improvement_tip)}</p>` : ''}
+    </div>
+  </div>
+  <div class="three-col">
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;font-family:var(--font-mono);font-weight:700;color:var(--text)">${n(qi.total_bullets)}</div>
+      <div style="font-size:.7rem;color:var(--text-3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Total Bullets</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;font-family:var(--font-mono);font-weight:700;color:var(--green)">${n(qi.quantified_bullets)}</div>
+      <div style="font-size:.7rem;color:var(--text-3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Quantified</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;font-family:var(--font-mono);font-weight:700;color:var(--accent)">${n(qi.quantified_percentage)}%</div>
+      <div style="font-size:.7rem;color:var(--text-3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Rate</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Strong Quantified Bullets</div>
+      <div class="item-list">
+        ${(qi.strong_examples||[]).map(e=>li('green','✓',esc(e))).join('')||`<p class="nodata">None found.</p>`}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">Weak / Vague Bullets</div>
+      <div class="item-list">
+        ${(qi.weak_examples||[]).map(e=>li('red','✗',esc(e))).join('')||`<p class="nodata" style="color:var(--green)">✓ No weak bullets found!</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── REAL VS BUZZ ─────────────────────────────────────────── */
+function realvsbuzz() {
+  const cl = A().candidate_classification || {};
+  const bc = cl.type === 'Proven' ? 'var(--green)' : cl.type === 'High Potential' ? 'var(--accent)' : 'var(--amber)';
+  return `
+  <div class="section-h">Real vs Buzz Analysis</div>
+  <div class="section-sub">Substance detection — separating evidence-backed claims from empty buzzwords</div>
+  <div class="card" style="border-left:3px solid ${bc};margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="font-family:var(--font-serif);font-size:1.8rem;font-weight:400">${esc(cl.type||'—')}</div>
+      <div>
+        <div style="font-size:.77rem;color:var(--text-2)">Confidence: <strong>${esc(cl.confidence||'—')}</strong></div>
+        <div style="font-size:.77rem;color:var(--text-2)">Buzz rating: <strong>${esc(cl.buzz_word_rating||'—')}</strong></div>
+      </div>
+    </div>
+    ${cl.evidence ? `<p style="margin-top:12px;font-size:.8rem;color:var(--text-2);font-style:italic;line-height:1.7">${esc(cl.evidence)}</p>` : ''}
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Substance Examples</div>
+      <div class="item-list">
+        ${(cl.substance_examples||[]).map(e=>li('green','✓',esc(e))).join('')||noData()}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">Buzz Phrases (unverified)</div>
+      <div class="item-list">
+        ${(cl.buzz_examples||[]).map(e=>li('red','✗',esc(e))).join('')||`<p class="nodata" style="color:var(--green)">✓ No buzz phrases detected!</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── JD MATCH ─────────────────────────────────────────────── */
+function jdmatch() {
+  const a  = A();
+  const sc = a.jd_match_score;
+  if (sc == null) return `
+    <div class="section-h">JD Match Analysis</div>
+    <div class="empty-state">
+      <p>No job description was provided. Re-run with a JD for detailed alignment scoring.</p>
+      <button class="btn-secondary" onclick="resetApp()">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 7A6 6 0 0112.5 4.5M13 7A6 6 0 011.5 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M11 2l2 2.5-2.5 1.5M3 12L1 9.5l2.5-1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New Analysis with JD
+      </button>
+    </div>`;
   const matched = a.jd_matched_skills || [];
   const missing = a.jd_missing_skills || [];
-  const sc      = Math.min(Math.max(a.jd_match_score || 0, 0), 100);
-  const cls     = sc >= 70 ? 'bf-green' : sc >= 45 ? 'bf-amber' : 'bf-red';
-
+  const partial = a.jd_partial_skills || [];
   return `
-  <div class="sec">
-    <div class="kv-grid">
-      <div class="kv-cell"><div class="kv-val">${sc}%</div><div class="kv-lbl">Match Score</div></div>
-      <div class="kv-cell"><div class="kv-val">${matched.length}</div><div class="kv-lbl">Skills Matched</div></div>
-      <div class="kv-cell"><div class="kv-val">${missing.length}</div><div class="kv-lbl">Skills Missing</div></div>
+  <div class="section-h">JD Match Analysis</div>
+  <div class="section-sub">How well this candidate maps to the job description requirements</div>
+  <div class="score-ring-wrap">
+    <div class="ring-wrap">
+      <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+        <circle class="score-ring-track" cx="60" cy="60" r="54"/>
+        <circle class="score-ring-fill" cx="60" cy="60" r="54" data-pct="${sc}" stroke="var(--cyan)"/>
+      </svg>
+      <div class="score-ring-text">
+        <span class="score-ring-num" style="color:var(--cyan)">${sc}</span>
+        <span class="score-ring-lbl">%</span>
+      </div>
     </div>
-    <div class="bar-track" style="margin-bottom:24px;height:6px">
-      <div class="bar-fill ${cls}" style="width:0%;height:6px;border-radius:3px" data-w="${sc}%"></div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-    <div class="card">
-      <div class="card-title" style="color:var(--green)">Matched Skills</div>
-      <div class="tags">${matched.map(s => badge(s, 'green')).join('') || '<p style="font-size:13px;color:var(--tx3)">None matched.</p>'}</div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="color:var(--red)">Missing Skills</div>
-      <div class="tags">${missing.map(s => badge(s, 'red')).join('') || '<p style="font-size:13px;color:var(--green)">No skill gaps found.</p>'}</div>
+    <div class="score-ring-desc">
+      <h3>JD Match Score</h3>
+      <p>${esc(a.jd_match_summary||'Alignment analysis complete.')}</p>
     </div>
   </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">✓ Matched Requirements (${matched.length})</div>
+      <div class="skill-cloud">${matched.map(s=>`<span class="item-badge badge-green">${esc(s)}</span>`).join('')||noData()}</div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">✗ Missing Requirements (${missing.length})</div>
+      <div class="skill-cloud">${missing.map(s=>`<span class="item-badge badge-red">${esc(s)}</span>`).join('')||`<p class="nodata" style="color:var(--green)">✓ No gaps!</p>`}</div>
+    </div>
+  </div>
+  ${partial.length ? `<div class="card"><div class="card-title" style="color:var(--amber)">~ Partial Matches (${partial.length})</div><div class="skill-cloud">${partial.map(s=>`<span class="item-badge badge-amber">${esc(s)}</span>`).join('')}</div></div>` : ''}`;
+}
 
-  ${a.jd_match_summary ? `
-  <div class="sec">
-    <h3 class="sec-h">Match Analysis</h3>
-    <div class="callout">${esc(a.jd_match_summary)}</div>
+/* ── RED FLAGS ────────────────────────────────────────────── */
+function redflags() {
+  const flags  = A().red_flags       || [];
+  const probes = Q().red_flag_probes || [];
+  return `
+  <div class="section-h">Red Flags</div>
+  <div class="section-sub">Resume anomalies and high-risk signals to probe in interviews</div>
+  <div class="card" style="margin-bottom:12px;border-color:${flags.length?'rgba(255,90,101,.2)':'var(--border)'}">
+    <div class="card-title" style="color:var(--red)">Resume Red Flags</div>
+    ${flags.length
+      ? `<div class="item-list">${flags.map(f=>li('red','⚑',`<strong>${esc(f.flag||String(f))}</strong>${f.explanation?' — '+esc(f.explanation):''}`)).join('')}</div>`
+      : `<p style="color:var(--green);font-size:.82rem">✓ No significant red flags detected in this resume.</p>`}
+  </div>
+  ${probes.length ? `
+  <div class="card">
+    <div class="card-title">Probing Interview Questions</div>
+    <div class="qa-list">
+      ${probes.map((p,i)=>qa(i+1,esc(p.question||''),'Hard',
+        (p.concern?`<strong>Concern:</strong> ${esc(p.concern)}<br>`:'')+(p.green_flag_answer?`<strong>Strong answer signals:</strong> ${esc(p.green_flag_answer)}<br>`:'')+( p.red_flag_answer?`<strong>Concerning answer signals:</strong> ${esc(p.red_flag_answer)}` :'')
+      )).join('')}
+    </div>
   </div>` : ''}`;
 }
 
-/* ═══════════════════════════════════════════
-   TAB: QUESTIONS
-   ═══════════════════════════════════════════ */
-function tabQuestions(qs, heading, prefix) {
-  if (!qs.length) return emptyState(`No ${heading.toLowerCase()} were generated.`);
+/* ── TECHNICAL ────────────────────────────────────────────── */
+function technical() {
+  const qs = Q().technical_questions || [];
   return `
-  <div class="sec"><h3 class="sec-h">${heading}</h3></div>
-  <div class="q-list">
-    ${qs.map((q, i) => {
-      const d   = q.difficulty || '';
-      const dtag = d ? badge(d, d==='Easy'?'green':d==='Hard'?'red':'amber') : '';
-      const ctag = q.skill_tested ? badge(q.skill_tested, 'brand') : (q.competency ? badge(q.competency, 'brand') : '');
-      const rows = [
-        ['Look for',       q.expected_answer_hint || q.what_to_listen_for],
-        ['STAR probe',     q.star_guidance],
-        ['Ideal approach', q.ideal_approach],
-        ['Watch for',      q.what_to_avoid],
-        ['Strong answer',  q.green_flag_answer],
-        ['Weak answer',    q.red_flag_answer],
-        ['Scoring rubric', q.scoring_rubric],
-        ['Follow-up',      q.follow_up],
-      ].filter(r => r[1]);
-      return `
-      <div class="q-item">
-        <div class="q-row">
-          <span class="q-num">${prefix}${i+1}</span>
-          <div class="q-text">${esc(q.question)}</div>
-        </div>
-        ${(ctag || dtag) ? `<div class="q-tags-row">${ctag}${dtag}</div>` : ''}
-        ${rows.length ? `<div class="q-detail">
-          ${rows.map(r => `<div class="q-detail-row"><strong>${r[0]}:</strong> ${esc(String(r[1]))}</div>`).join('')}
-        </div>` : ''}
-      </div>`;
-    }).join('')}
-  </div>`;
+  <div class="section-h">Technical Interview Questions</div>
+  <div class="section-sub">Role-specific technical questions tailored to this candidate's background</div>
+  ${qs.length
+    ? `<div class="qa-list">${qs.map((q,i)=>qa(i+1,esc(q.question||String(q)),q.difficulty||'Medium',esc(q.evaluation_guide||q.answer_guide||''))).join('')}</div>`
+    : `<div class="empty-state"><p>No technical questions generated. Ensure a target role was provided.</p></div>`}`;
 }
 
-/* ═══════════════════════════════════════════
-   TAB: DEEP DIVE
-   ═══════════════════════════════════════════ */
-function tabDeepDive(q) {
-  const dd = q.deep_dive_questions  || [];
-  const cf = q.culture_fit_questions || [];
+/* ── BEHAVIOURAL ──────────────────────────────────────────── */
+function behavioral() {
+  const qs = Q().behavioral_questions || [];
   return `
-  <div class="sec">
-    <h3 class="sec-h">Deep Dive — Resume-Specific Probes</h3>
-    <div class="q-list">
-      ${dd.map((q, i) => `
-      <div class="q-item">
-        <div class="q-row">
-          <span class="q-num">D${i+1}</span>
-          <div class="q-text">${esc(q.question)}</div>
-        </div>
-        ${q.target ? `<div class="q-tags-row">${badge(q.target, '')}</div>` : ''}
-        <div class="q-detail">
-          ${q.intent         ? `<div class="q-detail-row"><strong>Intent:</strong> ${esc(q.intent)}</div>` : ''}
-          ${q.expected_depth ? `<div class="q-detail-row"><strong>Depth expected:</strong> ${esc(q.expected_depth)}</div>` : ''}
-        </div>
-      </div>`).join('') || '<p style="font-size:13px;color:var(--tx3);padding:8px 0">No deep-dive questions generated.</p>'}
-    </div>
+  <div class="section-h">Behavioural Interview Questions</div>
+  <div class="section-sub">Structured STAR-format questions to assess past behavior and culture fit</div>
+  ${qs.length
+    ? `<div class="qa-list">${qs.map((q,i)=>qa(i+1,esc(q.question||String(q)),q.difficulty||'Medium',esc(q.evaluation_guide||q.answer_guide||''))).join('')}</div>`
+    : `<div class="empty-state"><p>No behavioural questions generated.</p></div>`}`;
+}
+
+/* ── SITUATIONAL ──────────────────────────────────────────── */
+function situational() {
+  const qs = Q().situational_questions || [];
+  return `
+  <div class="section-h">Situational Interview Questions</div>
+  <div class="section-sub">Hypothetical scenarios to evaluate problem-solving and judgment</div>
+  ${qs.length
+    ? `<div class="qa-list">${qs.map((q,i)=>qa(i+1,esc(q.question||String(q)),q.difficulty||'Medium',esc(q.evaluation_guide||q.answer_guide||''))).join('')}</div>`
+    : `<div class="empty-state"><p>No situational questions generated.</p></div>`}`;
+}
+
+/* ── DEEP DIVE ────────────────────────────────────────────── */
+function deepdive() {
+  const qs = Q().deep_dive_questions || Q().culture_fit_questions || [];
+  return `
+  <div class="section-h">Deep Dive Questions</div>
+  <div class="section-sub">Advanced questions to probe specific resume claims and cultural alignment</div>
+  ${qs.length
+    ? `<div class="qa-list">${qs.map((q,i)=>qa(i+1,esc(q.question||String(q)),q.difficulty||'Hard',esc(q.evaluation_guide||q.answer_guide||''))).join('')}</div>`
+    : `<div class="empty-state"><p>No deep dive questions generated.</p></div>`}`;
+}
+
+/* ── BIAS ─────────────────────────────────────────────────── */
+function bias() {
+  const b = BI();
+  return `
+  <div class="section-h">Bias Audit Report</div>
+  <div class="section-sub">AI-powered fairness assessment to ensure equitable candidate evaluation</div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Bias Indicators</div>
+    ${biasMeter([
+      ['Gender Neutrality',     n(b.gender_neutrality_score)],
+      ['Age Neutrality',        n(b.age_neutrality_score)],
+      ['Cultural Inclusivity',  n(b.cultural_inclusivity_score)],
+      ['Skills-Based Framing',  n(b.skills_based_framing_score)],
+      ['Language Accessibility',n(b.language_accessibility_score)],
+    ])}
   </div>
-
-  <div class="sec">
-    <h3 class="sec-h">Culture Fit Questions</h3>
-    <div class="q-list">
-      ${cf.map((q, i) => `
-      <div class="q-item">
-        <div class="q-row">
-          <span class="q-num">C${i+1}</span>
-          <div class="q-text">${esc(q.question)}</div>
-        </div>
-        <div class="q-detail">
-          ${q.what_to_listen_for ? `<div class="q-detail-row"><strong>Listen for:</strong> ${esc(q.what_to_listen_for)}</div>` : ''}
-          ${(q.alignment_signals || []).length ? `<div class="q-detail-row"><strong>Alignment signals:</strong> ${esc(q.alignment_signals.join(', '))}</div>` : ''}
-        </div>
-      </div>`).join('') || '<p style="font-size:13px;color:var(--tx3);padding:8px 0">No culture fit questions generated.</p>'}
-    </div>
-  </div>`;
+  ${(b.bias_flags||[]).length ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title" style="color:var(--amber)">Potential Bias Signals</div>
+    <div class="item-list">${(b.bias_flags||[]).map(f=>li('amber','⚠',esc(f.flag||String(f))+(f.explanation?' — '+esc(f.explanation):''))).join('')}</div>
+  </div>` : `<div class="card" style="margin-bottom:12px"><p style="color:var(--green);font-size:.82rem">✓ No significant bias signals detected in this evaluation context.</p></div>`}
+  ${b.overall_bias_assessment ? `<div class="card"><div class="card-title">Overall Assessment</div><p style="font-size:.82rem;color:var(--text-2);line-height:1.7">${esc(b.overall_bias_assessment)}</p></div>` : ''}`;
 }
 
-/* ═══════════════════════════════════════════
-   TAB: RED FLAGS
-   ═══════════════════════════════════════════ */
-function tabRedFlags(probes, resumeFlags) {
+/* ── COACHING ─────────────────────────────────────────────── */
+function coaching() {
+  const co = CO();
   return `
-  ${resumeFlags.length ? `
-  <div class="sec">
-    <h3 class="sec-h">Resume Red Flags</h3>
-    <div class="q-list">
-      ${resumeFlags.map((f, i) => `
-      <div class="q-item">
-        <div class="q-row">
-          <span class="q-num" style="color:var(--red)">F${i+1}</span>
-          <div class="q-text">${esc(f.flag || String(f))}</div>
-        </div>
-        <div class="q-detail">
-          ${f.explanation   ? `<div class="q-detail-row"><strong>Explanation:</strong> ${esc(f.explanation)}</div>` : ''}
-          ${f.probe_question ? `<div class="q-detail-row"><strong>Suggested probe:</strong> ${esc(f.probe_question)}</div>` : ''}
-        </div>
-      </div>`).join('')}
-    </div>
+  <div class="section-h">Candidate Coaching Report</div>
+  <div class="section-sub">Constructive feedback to share with the candidate regardless of outcome</div>
+  ${co.resume_strengths ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Resume Strengths</div>
+    <p style="font-size:.82rem;color:var(--text-2);line-height:1.7">${esc(co.resume_strengths)}</p>
   </div>` : ''}
+  ${co.areas_for_improvement ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Areas for Improvement</div>
+    <div class="item-list">${(Array.isArray(co.areas_for_improvement)?co.areas_for_improvement:[co.areas_for_improvement]).map(a=>li('amber','→',esc(a))).join('')}</div>
+  </div>` : ''}
+  ${(co.skill_development_suggestions||[]).length ? `
+  <div class="card">
+    <div class="card-title">Skill Development Suggestions</div>
+    <div class="item-list">${(co.skill_development_suggestions||[]).map(s=>li('blue','📘',esc(s))).join('')}</div>
+  </div>` : ''}
+  ${!co.resume_strengths && !co.areas_for_improvement ? `<div class="empty-state"><p>No coaching data available for this candidate.</p></div>` : ''}`;
+}
 
-  <div class="sec">
-    <h3 class="sec-h">Red Flag Interview Probes</h3>
-    <div class="q-list">
-      ${probes.length ? probes.map((p, i) => `
-      <div class="q-item">
-        <div class="q-row">
-          <span class="q-num">${badge('Probe', 'red')}</span>
-          <div class="q-text">${esc(p.question)}</div>
-        </div>
-        <div class="q-detail">
-          ${p.concern          ? `<div class="q-detail-row"><strong>Concern:</strong> ${esc(p.concern)}</div>` : ''}
-          ${p.green_flag_answer ? `<div class="q-detail-row"><strong>Strong answer:</strong> ${esc(p.green_flag_answer)}</div>` : ''}
-          ${p.red_flag_answer   ? `<div class="q-detail-row"><strong>Concerning answer:</strong> ${esc(p.red_flag_answer)}</div>` : ''}
-        </div>
-      </div>`).join('') : emptyState('No red flag probes generated.')}
+/* ── OUTREACH ─────────────────────────────────────────────── */
+function outreach() {
+  const a = A();
+  const name = a.candidate_name || 'Candidate';
+  const firstName = name.split(' ')[0];
+  const role  = a.current_role || '[Role]';
+  const strength = (a.top_strengths||[{}])[0]?.strength || 'your impressive background';
+
+  const linkedinDM = `Hi ${firstName},\n\nI came across your profile and was impressed by your experience as ${role}${strength !== 'your impressive background' ? `, especially your background in ${strength}` : ''}.\n\nWe have an exciting opportunity that I think could be a strong match for your skills. Would you be open to a brief 15-minute call to explore?\n\nBest,\n[Your Name]`;
+
+  const emailSubj  = `Exciting opportunity — ${role} at [Company]`;
+  const emailBody  = `Dear ${firstName},\n\nI hope this message finds you well. I'm reaching out because your profile stood out to our team — particularly your experience with ${strength}.\n\nWe're currently building out our [Team] at [Company], and I believe your background aligns exceptionally well with what we're looking for.\n\nI'd love to schedule a quick exploratory conversation. Are you available for a 20-minute call this week or next?\n\nBest regards,\n[Your Name]\n[Title] | [Company]`;
+
+  return `
+  <div class="section-h">Outreach Templates</div>
+  <div class="section-sub">AI-personalized messages based on this candidate's profile</div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">LinkedIn Direct Message</div>
+    <div class="mono-block" id="outreach-li">${esc(linkedinDM)}</div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="copy-btn-sm" onclick="copyText(this, ${JSON.stringify(linkedinDM)})">Copy</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Email Outreach</div>
+    <div style="font-size:.72rem;color:var(--text-3);margin-bottom:8px;font-family:var(--font-mono)">Subject: ${esc(emailSubj)}</div>
+    <div class="mono-block" id="outreach-email">${esc(emailBody)}</div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="copy-btn-sm" onclick="copyText(this, ${JSON.stringify(emailBody)})">Copy body</button>
+      <button class="copy-btn-sm" onclick="copyText(this, ${JSON.stringify(emailSubj)})">Copy subject</button>
     </div>
   </div>`;
 }
 
-/* ═══════════════════════════════════════════
-   TAB: BIAS AUDIT
-   ═══════════════════════════════════════════ */
-function tabBias(bi) {
-  if (!bi || !Object.keys(bi).length) return emptyState('Bias report not available.');
-  const pii     = bi.pii_detected || {};
-  const vectors = bi.potential_bias_vectors || [];
-  const merit   = bi.merit_indicators || [];
-  const blind   = bi.recommended_blind_fields || [];
-
+/* ── AGENT ────────────────────────────────────────────────── */
+function agent() {
+  const a = A();
   return `
-  <div class="sec">
-    <div class="kv-grid">
-      <div class="kv-cell">
-        <div class="kv-val">${bi.fairness_score ?? '—'}</div>
-        <div class="kv-lbl">Fairness Score</div>
+  <div class="section-h">Recruitment Agent</div>
+  <div class="section-sub">Ask anything about this candidate — the agent has full context</div>
+  <div class="agent-wrap">
+    <div class="agent-header">
+      <div class="agent-avatar">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 1.5L16 5.25V12.75L9 16.5L2 12.75V5.25L9 1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 5.5L12.5 7.5V11.5L9 13.5L5.5 11.5V7.5L9 5.5Z" fill="currentColor" opacity=".9"/></svg>
       </div>
-      <div class="kv-cell" style="grid-column:span 2">
-        <div class="kv-val" style="font-size:15px;font-family:var(--fb)">${esc(bi.blind_review_recommendation || '—')}</div>
-        <div class="kv-lbl">Blind Review Recommendation</div>
+      <div>
+        <div class="agent-title">TalentIQ Agent</div>
+        <div class="agent-sub">Llama 3.3 · 70B · Full candidate context loaded</div>
+      </div>
+      <div class="agent-status">
+        <span class="item-badge badge-teal" style="font-size:.62rem">● Active</span>
       </div>
     </div>
-  </div>
-
-  <div class="pii-grid">
-    <div class="card">
-      <div class="card-title">PII Detection Scan</div>
-      <table class="pii-table">
-        ${Object.entries(pii).map(([k, v]) => `
-        <tr>
-          <td>${k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
-          <td>${badge(v ? 'Detected' : 'Clear', v ? 'amber' : 'green')}</td>
-        </tr>`).join('')}
-      </table>
+    <div class="chat-messages" id="agent-messages"></div>
+    <div class="quick-qs" id="quick-qs">
+      <span style="font-size:.65rem;color:var(--text-3);margin-right:2px;font-family:var(--font-mono)">Quick:</span>
+      ${['Summarize top hiring risks','Draft rejection email','Write offer letter','Suggest salary range','Rate culture fit','Gaps to probe in interview?','Key strengths summary','Competitive profile assessment'].map(q=>`<button class="quick-q-btn" onclick="askQuick('${q.replace(/'/g,"\\'")}')"> ${q}</button>`).join('')}
     </div>
-    <div class="card">
-      <div class="card-title">Recommended Blind Fields</div>
-      <div style="margin-bottom:16px">${blind.map(b => `<div class="qwin-item">${esc(b)}</div>`).join('') || '<p style="font-size:13px;color:var(--tx3)">None recommended.</p>'}</div>
-      ${merit.length ? `<div class="card-title" style="margin-top:8px">Merit Anchors</div>${merit.map(m => `<div class="qwin-item">${esc(m)}</div>`).join('')}` : ''}
-    </div>
-  </div>
-
-  <div class="sec">
-    <h3 class="sec-h">Bias Vectors</h3>
-    ${vectors.map(v => `
-    <div class="bias-vec">
-      <div class="bv-head">
-        <span class="bv-name">${esc(v.vector || '')}</span>
-        ${v.risk_level ? badge(v.risk_level, v.risk_level==='High'?'red':v.risk_level==='Medium'?'amber':'green') : ''}
-      </div>
-      <p style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:6px">${esc(v.explanation || '')}</p>
-      ${v.mitigation ? `<p style="font-size:13px;color:var(--tx2)"><strong>Mitigation:</strong> ${esc(v.mitigation)}</p>` : ''}
-    </div>`).join('') || '<p style="font-size:13px;color:var(--green)">No significant bias vectors identified.</p>'}
-  </div>
-
-  ${bi.evaluation_guidance ? `
-  <div class="sec">
-    <h3 class="sec-h">Evaluation Guidance</h3>
-    <div class="callout callout-green">${esc(bi.evaluation_guidance)}</div>
-  </div>` : ''}`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: COACHING
-   ═══════════════════════════════════════════ */
-function tabCoaching(co, a) {
-  if (!co || !Object.keys(co).length) return emptyState('Coaching report not available.');
-  const roadmap   = co.improvement_roadmap       || [];
-  const wins      = co.quick_wins                || [];
-  const courses   = co.skill_gap_courses         || [];
-  const strengths = co.key_strengths_recognized  || [];
-
-  return `
-  ${co.overall_assessment ? `
-  <div class="sec">
-    <h3 class="sec-h">Overall Assessment</h3>
-    <div class="callout">${esc(co.overall_assessment)}</div>
-  </div>` : ''}
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
-    <div>
-      <h3 class="sec-h">Recognised Strengths</h3>
-      ${strengths.map(s => `
-      <div class="card" style="border-left:2px solid var(--green);margin-bottom:8px;padding:14px 16px">
-        <div style="font-weight:600;font-size:13.5px;color:var(--tx1);margin-bottom:4px">${esc(s.strength || String(s))}</div>
-        <div style="font-size:13px;color:var(--tx2);line-height:1.65">${esc(s.why_it_matters || '')}</div>
-      </div>`).join('') || '<p style="font-size:13px;color:var(--tx3)">None identified.</p>'}
-    </div>
-    <div>
-      <h3 class="sec-h">Quick Wins — Next 7 Days</h3>
-      ${wins.map(w => `<div class="qwin-item">${esc(w)}</div>`).join('') || '<p style="font-size:13px;color:var(--tx3)">No quick wins available.</p>'}
-    </div>
-  </div>
-
-  <div class="sec">
-    <h3 class="sec-h">Improvement Roadmap</h3>
-    ${roadmap.map(r => `
-    <div class="roadmap-item">
-      <div class="rm-area">${esc(r.area || '')}</div>
-      <div class="rm-action">${esc(r.specific_action || '')}</div>
-      <div class="rm-tags">
-        ${r.timeline ? badge(r.timeline, 'brand') : ''}
-        ${(r.resources || []).map(res => badge(res, '')).join('')}
-      </div>
-    </div>`).join('') || '<p style="font-size:13px;color:var(--tx3)">No roadmap available.</p>'}
-  </div>
-
-  ${courses.length ? `
-  <div class="sec">
-    <h3 class="sec-h">Recommended Courses</h3>
-    <div class="card">
-      ${courses.map(c => `
-      <div class="course-row">
-        <div style="flex:1;min-width:0">
-          <div class="course-skill">${esc(c.skill || '')}</div>
-          <div class="course-name">${esc(c.recommended_course || '')}</div>
-          <div class="course-detail">${esc([c.platform, c.estimated_time].filter(Boolean).join(' · '))}</div>
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}
-
-  ${co.career_advice ? `
-  <div class="sec">
-    <h3 class="sec-h">Career Advice</h3>
-    <div class="callout callout-green"><em>${esc(co.career_advice)}</em></div>
-  </div>` : ''}
-
-  <!-- Feedback Letter Generator -->
-  <div class="sec">
-    <h3 class="sec-h">Generate Candidate Feedback Letter</h3>
-    <div class="card">
-      <div class="gen-form" style="grid-template-columns:1fr 1fr auto">
-        <div class="gen-field">
-          <label class="gen-label">Job Title</label>
-          <input id="fb-role" class="gen-input" placeholder="e.g. Senior Engineer" value="${esc(a.current_role || '')}">
-        </div>
-        <div class="gen-field">
-          <label class="gen-label">Decision</label>
-          <select id="fb-decision" class="gen-select">
-            <option value="Not Selected">Not Selected</option>
-            <option value="Moving Forward">Moving Forward</option>
-            <option value="On Hold">On Hold</option>
-          </select>
-        </div>
-        <div class="gen-field" style="justify-content:flex-end">
-          <label class="gen-label">&nbsp;</label>
-          <button class="gen-btn" onclick="runFeedbackLetter()">Generate</button>
-        </div>
-      </div>
-      <div id="feedback-output"></div>
-    </div>
-  </div>`;
-}
-
-/* ═══════════════════════════════════════════
-   TAB: OUTREACH
-   ═══════════════════════════════════════════ */
-function tabOutreach(a) {
-  return `
-  <div class="sec">
-    <h3 class="sec-h">Personalised Outreach Generator</h3>
-    <div class="callout" style="margin-bottom:20px">
-      Generate a hyper-personalised recruiter email grounded in this candidate's specific background, skills, and value proposition — not a generic template.
-    </div>
-    <div class="card">
-      <div class="gen-form">
-        <div class="gen-field">
-          <label class="gen-label">Role You're Hiring For</label>
-          <input id="or-role" class="gen-input" placeholder="e.g. Senior Backend Engineer">
-        </div>
-        <div class="gen-field">
-          <label class="gen-label">Your Company</label>
-          <input id="or-company" class="gen-input" placeholder="Company name">
-        </div>
-        <div class="gen-field" style="justify-content:flex-end">
-          <label class="gen-label">&nbsp;</label>
-          <button class="gen-btn" onclick="runOutreachEmail()">Generate email</button>
-        </div>
-      </div>
-      <div id="outreach-output"></div>
-    </div>
-  </div>`;
-}
-
-/* ─────────────────────────────────────────────
-   GENERATOR API CALLS
-───────────────────────────────────────────── */
-async function runOutreachEmail() {
-  const role    = $('or-role')?.value?.trim()    || 'Software Engineer';
-  const company = $('or-company')?.value?.trim() || 'Our Company';
-  const out     = $('outreach-output');
-  out.innerHTML = '<div class="loading-inline">Generating personalised outreach email…</div>';
-
-  try {
-    const r = await fetch(`${API}/generate-outreach`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ profile: reportData.analysis, job_title: role, company_name: company }),
-    });
-    if (!r.ok) throw new Error('Generation failed');
-    const d = await r.json();
-    if (!d.email_body) throw new Error('Empty response from server');
-
-    out.innerHTML = buildEmailDisplay(d.subject_line, d.email_body, d.follow_up_subject, d.follow_up_body, d.personalization_hooks);
-  } catch (e) {
-    out.innerHTML = `<div class="err-msg">${esc(e.message)}</div>`;
-  }
-}
-
-async function runFeedbackLetter() {
-  const role     = $('fb-role')?.value?.trim()     || 'Software Engineer';
-  const decision = $('fb-decision')?.value         || 'Not Selected';
-  const out      = $('feedback-output');
-  out.innerHTML  = '<div class="loading-inline">Generating feedback letter…</div>';
-
-  try {
-    const r = await fetch(`${API}/generate-feedback-letter`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ profile: reportData.analysis, decision, job_title: role }),
-    });
-    if (!r.ok) throw new Error('Generation failed');
-    const d = await r.json();
-    if (!d.letter_body) throw new Error('Empty response from server');
-
-    out.innerHTML = '<div class="div"></div>' + buildEmailDisplay(d.subject_line, d.letter_body);
-  } catch (e) {
-    out.innerHTML = `<div class="err-msg">${esc(e.message)}</div>`;
-  }
-}
-
-function buildEmailDisplay(subject, body, followUpSubject, followUpBody, hooks) {
-  const safeBody = esc(body || '');
-  const copyPayload = JSON.stringify((subject ? subject + '\n\n' : '') + (body || ''));
-
-  let html = `
-  <div class="email-display">
-    <div class="email-head">
-      <div class="email-subject"><strong>Subject:</strong> ${esc(subject || '(No subject)')}</div>
-      <button class="copy-btn" onclick="copyText(${copyPayload})">
-        ${svgIcon('copy')} Copy
+    <div class="chat-input-row">
+      <input class="chat-input" id="agent-input" type="text" placeholder="Ask about ${esc(a.candidate_name||'this candidate')}…" onkeydown="if(event.key==='Enter')sendAgentMessage()">
+      <button class="chat-send" id="agent-send" onclick="sendAgentMessage()" title="Send">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M14 2L7.5 8.5M14 2l-4.5 12-2-5.5L2 6.5 14 2z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
-    <div class="email-body">${safeBody}</div>
   </div>`;
+}
 
-  if (followUpSubject || followUpBody) {
-    const fuPayload = JSON.stringify((followUpSubject ? followUpSubject + '\n\n' : '') + (followUpBody || ''));
-    html += `
-    <p style="font-size:12px;color:var(--tx3);margin:16px 0 8px;font-family:var(--fm)">FOLLOW-UP · 5 DAYS LATER</p>
-    <div class="email-display">
-      <div class="email-head">
-        <div class="email-subject"><strong>Subject:</strong> ${esc(followUpSubject || '')}</div>
-        <button class="copy-btn" onclick="copyText(${fuPayload})">${svgIcon('copy')} Copy</button>
+function initAgent() {
+  if (agentHistory.length === 0) {
+    addAgentMessage('ai', `Hello! I'm the TalentIQ Recruitment Agent. I have full context on **${esc(A().candidate_name||'this candidate')}** — their skills, experience, ATS scores, red flags, interview questions, and bias analysis.\n\nWhat would you like to know or do?`);
+  } else {
+    agentHistory.forEach(msg => addAgentMessage(msg.role === 'user' ? 'user' : 'ai', msg.content, false));
+  }
+}
+
+function askQuick(q) {
+  const input = document.getElementById('agent-input');
+  if (input) { input.value = q; sendAgentMessage(); }
+}
+
+async function sendAgentMessage() {
+  const input   = document.getElementById('agent-input');
+  const sendBtn = document.getElementById('agent-send');
+  const msg     = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  sendBtn.disabled = true;
+  addAgentMessage('user', msg);
+  agentHistory.push({ role: 'user', content: msg });
+
+  const typingId = addAgentMessage('ai', '<span class="typing-dot"><span></span><span></span><span></span></span>');
+
+  try {
+    const res = await fetch(`${API}/agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, candidate_context: reportData })
+    });
+
+    const bubble = document.getElementById(typingId);
+    if (res.ok) {
+      const data  = await res.json();
+      const reply = data.response || data.message || 'Analysis complete.';
+      if (bubble) bubble.innerHTML = mdToHtml(reply);
+      agentHistory.push({ role: 'ai', content: reply });
+    } else {
+      const fallback = localAgentAnswer(msg);
+      if (bubble) bubble.innerHTML = mdToHtml(fallback);
+      agentHistory.push({ role: 'ai', content: fallback });
+    }
+  } catch (_) {
+    const fallback = localAgentAnswer(msg);
+    const bubble   = document.getElementById(typingId);
+    if (bubble) bubble.innerHTML = mdToHtml(fallback);
+    agentHistory.push({ role: 'ai', content: fallback });
+  }
+
+  sendBtn.disabled = false;
+  const msgs = document.getElementById('agent-messages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addAgentMessage(role, content, push = false) {
+  const msgs = document.getElementById('agent-messages');
+  if (!msgs) return null;
+  const id  = 'msg-' + Date.now() + Math.random().toString(36).slice(2,5);
+  const div = document.createElement('div');
+  div.className = `chat-msg chat-msg--${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar msg-avatar--${role}">
+      ${role === 'ai'
+        ? `<svg width="11" height="11" viewBox="0 0 18 18" fill="none"><path d="M9 1.5L16 5.25V12.75L9 16.5L2 12.75V5.25L9 1.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5L12.5 7.5V11.5L9 13.5L5.5 11.5V7.5L9 5.5Z" fill="currentColor" opacity=".9"/></svg>`
+        : 'You'}
+    </div>
+    <div class="msg-bubble" id="${id}">${role === 'ai' ? mdToHtml(content) : esc(content)}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function mdToHtml(text) {
+  return esc(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function localAgentAnswer(msg) {
+  const a    = A();
+  const q    = msg.toLowerCase();
+  const name = a.candidate_name || 'This candidate';
+  const fn   = name.split(' ')[0];
+
+  if (/risk|flag|concern/i.test(q)) {
+    const flags = (a.red_flags||[]).slice(0,3).map(f=>`• ${f.flag||f}`).join('\n');
+    const gaps  = (a.potential_gaps||[]).slice(0,3).map(g=>`• ${g.gap||g}`).join('\n');
+    return `**Top hiring risks for ${name}:**\n\n${flags||'No explicit red flags found.'}\n\n**Key gaps to address:**\n${gaps||'No major gaps identified.'}`;
+  }
+  if (/offer|salary|comp/i.test(q)) {
+    return `Based on ${a.years_of_experience||'N/A'} years of experience as **${a.current_role||'this role'}** with an ATS score of **${a.overall_score||'N/A'}/100**:\n\n**Recommendation:** Research current market rates for this role and location. Consider the candidate's impact score (${(a.quantified_impact||{}).score||'N/A'}) and career velocity (${a.career_velocity||'N/A'}) during negotiation.\n\n*For precise salary benchmarking, connect the /agent backend for live AI analysis.*`;
+  }
+  if (/reject|decline|pass/i.test(q)) {
+    return `**Rejection email draft:**\n\nDear ${fn},\n\nThank you for taking the time to apply for the ${a.current_role||'role'} position and for your interest in our company.\n\nAfter careful consideration, we've decided to move forward with another candidate whose experience more closely aligns with our current needs.\n\nWe were genuinely impressed by your **${(a.top_strengths||[{}])[0]?.strength||'experience'}** and encourage you to apply for future opportunities.\n\nWe wish you all the best in your search.\n\nBest regards,\n[Your Name]`;
+  }
+  if (/strength/i.test(q)) {
+    return `**Key strengths for ${name}:**\n\n${(a.top_strengths||[]).slice(0,5).map(s=>`• **${s.strength||s}**${s.evidence?' — '+s.evidence:''}`).join('\n')||'No strengths data available.'}`;
+  }
+  if (/culture|fit|team|value/i.test(q)) {
+    const cf = (Q().culture_fit_questions||[]);
+    return cf.length
+      ? `**Culture fit questions for ${name}:**\n\n${cf.slice(0,3).map((q,i)=>`${i+1}. ${q.question}`).join('\n\n')}`
+      : `Based on the analysis, ${name}'s career trajectory suggests **${esc(a.career_trajectory||'progressive growth')}**. Classified as **"${a.candidate_classification?.type||'N/A'}"** — ${a.candidate_classification?.evidence||'supporting evidence found in resume'}.`;
+  }
+  if (/competi|benchmark|market|compar/i.test(q)) {
+    return `**Competitive profile for ${name}:**\n\n• **ATS Score:** ${a.overall_score||0}/100 ${a.overall_score >= 75 ? '(Above average)' : a.overall_score >= 55 ? '(Average)' : '(Below average)'}\n• **Experience level:** ${a.experience_level||'N/A'} with ${a.years_of_experience||'N/A'} years\n• **Classification:** ${a.candidate_classification?.type||'N/A'}\n• **Career velocity:** ${a.career_velocity||'N/A'}\n• **Recommendation:** ${a.hire_recommendation||'Pending'}\n\n*For live competitive benchmarking, ensure the /agent backend is connected.*`;
+  }
+  return `I have full analysis loaded for **${name}**. Here's a quick summary:\n\n• **Score:** ${a.overall_score||0}/100\n• **Recommendation:** ${a.hire_recommendation||'Pending'}\n• **Experience:** ${a.years_of_experience||'N/A'} years as ${a.current_role||'N/A'}\n• **Top strength:** ${(a.top_strengths||[{}])[0]?.strength||'N/A'}\n• **Key gap:** ${(a.potential_gaps||[{}])[0]?.gap||'None identified'}\n\nAsk me anything specific — strengths, gaps, salary, outreach drafts, or interview questions!`;
+}
+
+/* ── SCORECARD ────────────────────────────────────────────── */
+function scorecard() {
+  const a = A();
+  const dims = [
+    'Technical Depth', 'Communication Clarity', 'Leadership Signals',
+    'Problem Solving', 'Culture Alignment', 'Growth Mindset',
+    'Domain Expertise', 'Quantified Impact'
+  ];
+  return `
+  <div class="section-h">Evaluation Scorecard</div>
+  <div class="section-sub">Structured candidate assessment for hiring committee review</div>
+  <div class="scorecard" id="scorecard-form">
+    <div class="sc-header">
+      <div>
+        <div style="font-weight:700;font-size:1rem">${esc(a.candidate_name||'Candidate')}</div>
+        <div style="font-size:.75rem;color:var(--text-3);font-family:var(--font-mono);margin-top:2px">${esc(a.current_role||'—')}</div>
       </div>
-      <div class="email-body">${esc(followUpBody || '')}</div>
+      <button class="btn-secondary" onclick="exportScorecard()">
+        <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2.5 10.5h8M6.5 2.5v6M4 6l2.5 2.5L9 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export Scorecard
+      </button>
+    </div>
+    ${dims.map((dim,di) => `
+      <div class="sc-row">
+        <div class="sc-label">${dim}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="sc-dots" id="sc-dim-${di}">
+            ${[1,2,3,4,5].map(v=>`<div class="sc-dot" data-dim="${di}" data-val="${v}" onclick="setScore(${di},${v})" title="${v}/5"></div>`).join('')}
+          </div>
+          <span style="font-size:.7rem;color:var(--text-3);font-family:var(--font-mono);min-width:28px" id="sc-val-${di}">—/5</span>
+        </div>
+      </div>`).join('')}
+    <div class="sc-row" style="margin-top:4px">
+      <div class="sc-label">Notes</div>
+      <textarea class="field-ta" id="sc-notes" rows="3" placeholder="Overall impression, key observations, follow-up actions…" style="margin-top:0;resize:none;font-size:.8rem"></textarea>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-secondary" style="color:var(--green);border-color:rgba(30,217,160,.25)" onclick="setFinalDecision('hire')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Advance
+      </button>
+      <button class="btn-secondary" style="color:var(--amber);border-color:rgba(255,170,64,.25)" onclick="setFinalDecision('maybe')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v4M6 9v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Maybe
+      </button>
+      <button class="btn-secondary" style="color:var(--red);border-color:rgba(255,90,101,.25)" onclick="setFinalDecision('reject')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Decline
+      </button>
+    </div>
+    <div id="sc-decision-msg" style="margin-top:10px;font-size:.8rem;color:var(--text-2)"></div>
+  </div>`;
+}
+
+function initScorecard() { window._scorecardVals = {}; }
+
+function setScore(dim, val) {
+  if (!window._scorecardVals) window._scorecardVals = {};
+  window._scorecardVals[dim] = val;
+  const dots = document.querySelectorAll(`#sc-dim-${dim} .sc-dot`);
+  dots.forEach((d,i) => {
+    d.className = 'sc-dot' + (i < val ? ` filled filled-${i+1}` : '');
+  });
+  document.getElementById(`sc-val-${dim}`).textContent = val + '/5';
+}
+
+function setFinalDecision(d) {
+  const msgs   = { hire:'✓ Candidate advanced to next round', maybe:'~ Added to maybe list', reject:'✗ Candidate declined' };
+  const colors = { hire:'var(--green)', maybe:'var(--amber)', reject:'var(--red)' };
+  const el     = document.getElementById('sc-decision-msg');
+  if (el) { el.textContent = msgs[d]; el.style.color = colors[d]; }
+  showToast(msgs[d], d === 'hire' ? 'success' : '');
+}
+
+function exportScorecard() {
+  showToast('Opening print dialog\u2026', '');
+  setTimeout(() => window.print(), 300);
+}
+
+/* ── PIPELINE ─────────────────────────────────────────────── */
+function pipeline() {
+  const a = A();
+  const stages = ['Applied','Screened','Interview','Final Round','Offer','Hired'];
+  const current = 2; // Interview stage
+  return `
+  <div class="section-h">Talent Pipeline</div>
+  <div class="section-sub">Candidate pipeline management and recruitment workflow tracking</div>
+  <div class="pipeline-track">
+    ${stages.map((s,i)=>`
+      <div class="pipeline-stage ${i===current?'current':i<current?'done':''}">
+        ${s}
+      </div>`).join('')}
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Candidate Summary</div>
+      <div class="item-list">
+        ${li('green','✓',`ATS Score: <strong>${esc(String(n(a.overall_score)))}/100</strong>`)}
+        ${li('blue','→',`Recommendation: <strong>${esc(a.hire_recommendation||'Pending')}</strong>`)}
+        ${li('violet','→',`Experience: <strong>${esc(String(a.years_of_experience||'N/A'))} years</strong>`)}
+        ${li('amber','→',`Classification: <strong>${esc(a.candidate_classification?.type||'N/A')}</strong>`)}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Suggested Next Actions</div>
+      <div class="item-list">
+        ${li('cyan','1','Schedule technical interview')}
+        ${li('cyan','2','Send skills assessment or take-home project')}
+        ${li('cyan','3','Request 2–3 professional references')}
+        ${li('cyan','4','Prepare panel interview scorecard')}
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recruitment Notes</div>
+    <textarea class="field-ta" rows="3" placeholder="Add pipeline notes, decisions, or follow-up reminders…" style="font-size:.8rem;resize:none;margin-top:0"></textarea>
+  </div>`;
+}
+
+/* ── DECISION ─────────────────────────────────────────────── */
+function decision() {
+  const a   = A();
+  const rec = a.hire_recommendation || '—';
+  const isH = /hire/i.test(rec) && !/not|pass|no/i.test(rec);
+  return `
+  <div class="section-h">AI Hire Decision</div>
+  <div class="section-sub">Structured recommendation with confidence scoring and risk assessment</div>
+  <div class="card" style="margin-bottom:12px;background:${isH?'var(--green-dim)':'var(--red-dim)'};border-color:${isH?'rgba(30,217,160,.3)':'rgba(255,90,101,.3)'}">
+    <div style="font-family:var(--font-serif);font-size:2.4rem;font-weight:400;color:${isH?'var(--green)':'var(--red)'};letter-spacing:-0.03em;line-height:1">${esc(rec)}</div>
+    ${a.hire_rationale ? `<p style="margin-top:12px;font-size:.82rem;color:var(--text-2);line-height:1.75">${esc(a.hire_rationale)}</p>` : ''}
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Factors In Favour</div>
+      <div class="item-list">
+        ${(a.top_strengths||[]).slice(0,4).map(s=>li('green','✓',esc(s.strength||String(s)))).join('')||noData()}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Factors Against</div>
+      <div class="item-list">
+        ${(a.potential_gaps||[]).slice(0,4).map(g=>li(g.severity==='Critical'?'red':'amber',g.severity==='Critical'?'✗':'~',esc(g.gap||String(g)))).join('')||`<p class="nodata" style="color:var(--green)">No significant gaps.</p>`}
+      </div>
+    </div>
+  </div>
+  ${a.jd_match_score != null ? `
+  <div class="card">
+    <div class="card-title">Key Decision Metrics</div>
+    <div style="display:flex;gap:36px;flex-wrap:wrap">
+      <div><div style="font-size:1.8rem;font-family:var(--font-mono);font-weight:700;color:var(--accent)">${a.overall_score||0}</div><div style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">ATS Score</div></div>
+      <div><div style="font-size:1.8rem;font-family:var(--font-mono);font-weight:700;color:var(--cyan)">${a.jd_match_score}%</div><div style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">JD Match</div></div>
+      <div><div style="font-size:1.8rem;font-family:var(--font-mono);font-weight:700;color:var(--green)">${(a.quantified_impact||{}).score||0}</div><div style="font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">Impact Score</div></div>
+    </div>
+  </div>` : ''}`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BUILDER HELPERS
+═══════════════════════════════════════════════════════════ */
+function ax(name, score, color) {
+  const s = Math.min(Math.max(Number(score)||0,0),100);
+  return `<div class="axis-card">
+    <div class="axis-top"><span class="axis-name">${name}</span><span class="axis-score" style="color:${color}">${s}</span></div>
+    <div class="axis-bar"><div class="axis-fill" style="background:${color}" data-w="${s}"></div></div>
+  </div>`;
+}
+
+function li(color, bullet, text, badge='') {
+  return `<div class="item-row">
+    <div class="item-bullet ${color}">${bullet}</div>
+    <div class="item-text">${text}</div>
+    ${badge ? `<span class="item-badge badge-${color==='red'?'red':color==='amber'?'amber':color==='green'?'green':color==='blue'?'blue':color==='violet'?'violet':'teal'}">${esc(String(badge))}</span>` : ''}
+  </div>`;
+}
+
+function tl(title, company, date, desc, compact=false) {
+  return `<div class="tl-item">
+    <div class="tl-left"><div class="tl-dot"></div>${!compact?'<div class="tl-line"></div>':''}</div>
+    <div>
+      <div class="tl-title">${title}</div>
+      <div class="tl-company">${company}</div>
+      <div class="tl-date">${date}</div>
+      ${desc ? `<div class="tl-desc">${desc}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function qa(num, question, difficulty, detail='') {
+  const cls = {Hard:'difficulty-hard',Medium:'difficulty-medium',Easy:'difficulty-easy'}[difficulty]||'difficulty-medium';
+  return `<div class="qa-item">
+    <div class="qa-q">
+      <span class="qa-num">Q${num}</span>
+      <span class="qa-text">${question}</span>
+      <span class="qa-difficulty ${cls}">${difficulty}</span>
+      <svg class="qa-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="qa-a">${detail || 'Look for specificity — exact numbers, trade-offs made, and lessons learned.'}</div>
+  </div>`;
+}
+
+function biasMeter(rows) {
+  return `<div class="bias-meter">${rows.map(([l,s])=>{
+    const c = s>=80?'var(--green)':s>=55?'var(--amber)':'var(--red)';
+    return `<div class="bias-row">
+      <div class="bias-label">${l}</div>
+      <div class="bias-track"><div class="bias-fill" style="background:${c}" data-w="${s}"></div></div>
+      <div class="bias-score" style="color:${c}">${s}%</div>
     </div>`;
-  }
-
-  if (hooks?.length) {
-    html += `<div class="div"></div>
-    <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);margin-bottom:10px">Personalisation Hooks</p>
-    <div class="tags">${hooks.map(h => badge(esc(h), '')).join('')}</div>`;
-  }
-
-  return html;
+  }).join('')}</div>`;
 }
 
-/* ─────────────────────────────────────────────
-   HELPER COMPONENTS
-───────────────────────────────────────────── */
-function badge(text, variant) {
-  const cls = variant ? `t t-${variant}` : 't';
-  return `<span class="${cls}">${esc(String(text))}</span>`;
+function noData() { return `<p class="nodata">No data available.</p>`; }
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1600);
+  });
 }
 
-function profileLink(href, iconSvg, label, newTab) {
-  if (!href) {
-    return `<span class="plink">${iconSvg} ${esc(label)}</span>`;
-  }
-  const attrs = newTab ? 'target="_blank" rel="noopener noreferrer"' : '';
-  return `<a href="${esc(href)}" ${attrs} class="plink">${iconSvg} ${esc(label)}</a>`;
-}
-
-function emptyState(msg) {
-  return `<div class="empty-st"><p>${esc(msg)}</p></div>`;
-}
-
-/* ─────────────────────────────────────────────
-   ICON LIBRARY
-───────────────────────────────────────────── */
-function svgIcon(name) {
-  const icons = {
-    mail:     `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".5" y="2" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.1"/><path d=".5 2.5l6 4.5 6-4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
-    linkedin: `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".5" y=".5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M3 6v4M3 4.2V4M5 10V7.5C5 6.5 5.5 6 6.5 6S8 6.5 8 7.5V10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
-    github:   `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1a5.5 5.5 0 00-1.74 10.72c.28.05.38-.12.38-.27V10.5c-1.56.34-1.89-.75-1.89-.75-.26-.65-.63-.83-.63-.83-.51-.35.04-.34.04-.34.56.04.86.58.86.58.5.86 1.31.61 1.63.47.05-.36.19-.62.35-.76-1.24-.14-2.54-.62-2.54-2.76 0-.61.22-1.1.58-1.49-.06-.14-.25-.7.06-1.47 0 0 .47-.15 1.53.57A5.3 5.3 0 016.5 4.3c.47 0 .95.06 1.4.19 1.06-.72 1.52-.57 1.52-.57.31.77.12 1.33.06 1.47.36.39.57.88.57 1.49 0 2.14-1.3 2.62-2.55 2.76.2.18.38.52.38 1.05v1.56c0 .15.1.32.38.27A5.5 5.5 0 006.5 1z" fill="currentColor"/></svg>`,
-    globe:    `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 1c-1.7 1.7-2.2 3.4-2.2 5.5s.5 3.8 2.2 5.5M6.5 1c1.7 1.7 2.2 3.4 2.2 5.5S8.2 10.3 6.5 12M1 6.5h11" stroke="currentColor" stroke-width=".9"/></svg>`,
-    pin:      `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 12S2.5 8.1 2.5 5.5a4 4 0 018 0C10.5 8.1 6.5 12 6.5 12z" stroke="currentColor" stroke-width="1.1"/><circle cx="6.5" cy="5.5" r="1.5" stroke="currentColor" stroke-width="1.1"/></svg>`,
-    phone:    `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2.5A.5.5 0 012.5 2h2a.5.5 0 01.5.4l.5 2.5a.5.5 0 01-.14.47L4.3 6.4a8 8 0 003.3 3.3l1.03-1.06a.5.5 0 01.47-.14l2.5.5a.5.5 0 01.4.5v2a.5.5 0 01-.5.5C5.1 12 1 7.9 1 2.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>`,
-    copy:     `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
-    search:   `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M14.5 14.5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-  };
-  return icons[name] || '';
-}
-
-/* ─────────────────────────────────────────────
-   UTILITIES
-───────────────────────────────────────────── */
-function esc(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#x27;');
-}
-
-function ensureHttp(url) {
-  if (!url) return '#';
-  if (/^https?:\/\//i.test(url)) return url;
-  return 'https://' + url;
-}
-
-function nameToInitials(name) {
-  if (!name) return 'CA';
-  return name.trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase();
-}
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function copyText(text) {
-  navigator.clipboard.writeText(text)
-    .then(() => toast('Copied to clipboard', 'ok'))
-    .catch(() => toast('Copy failed', 'err'));
-}
-
-function toast(msg, type = 'ok') {
-  const el = document.createElement('div');
-  el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity .3s, transform .3s';
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(8px)';
-    setTimeout(() => el.remove(), 350);
-  }, 2800);
+/* ── Toast ────────────────────────────────────────────────── */
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), type==='error'?5000:2800);
 }

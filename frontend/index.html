@@ -1,280 +1,431 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mindxcope | Your Mind is the Resume</title>
-
-  <!-- Favicon -->
-  <link rel="icon" href="logoo.png" type="image/png" />
-
-  <!-- Fonts & AOS -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" />
-
-  <!-- Swiper Slider -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      background: url('https://i.postimg.cc/fTfmYnCt/Chat-GPT-Image-Jun-7-2025-03-01-37-PM.png') no-repeat center center fixed;
-      background-size: cover;
-      color: #1f2937;
-      line-height: 1.6;
-    }
-
-    header {
-      background-color: #111827;
-      color: white;
-      padding: 20px 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-
-    nav a {
-      color: white;
-      margin-left: 20px;
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s;
-    }
-
-    nav a:hover,
-    nav a.active {
-      color: #facc15;
-    }
-
-    .hero {
-      background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1600267165780-00b66b674d80?auto=format&fit=crop&w=1400&q=80') no-repeat center center/cover;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: white;
-      padding: 0 20px;
-    }
-
-    .hero h1 {
-      font-size: 3.5rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-      text-transform: uppercase;
-    }
-
-    .hero p {
-      font-size: 1.4rem;
-      max-width: 700px;
-    }
-
-    .section {
-      background: rgba(255, 255, 255, 0.85);
-      padding: 80px 20px;
-      text-align: center;
-      border-radius: 12px;
-      margin: 20px;
-    }
-
-    .section h2 {
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-      color: #1e3a8a;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      margin-top: 40px;
-    }
-
-    .card {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-      transition: all 0.3s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-    }
-
-    .swiper {
-      width: 100%;
-      max-width: 900px;
-      margin: 40px auto;
-    }
-
-    .swiper-slide {
-      text-align: center;
-      font-size: 18px;
-      background: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 300px;
-    }
-
-    .swiper-slide img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 12px;
-    }
-
-    footer {
-      background: #111827;
-      color: white;
-      text-align: center;
-      padding: 40px 20px;
-      font-size: 0.95rem;
-    }
-
-    #topBtn {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      display: none;
-      background: #1e40af;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      font-size: 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalentIQ — AI Talent Intelligence Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <div style="display: flex; align-items: center;">
-      <img src="logoo.png" alt="Mindxcope Logo" style="height: 40px; margin-right: 10px;">
-      <span style="font-size: 1.8rem; font-weight: 700; text-transform: uppercase;">MindXcope</span>
+<!-- ░░░░ AMBIENT ░░░░ -->
+<div class="ambient" aria-hidden="true">
+  <div class="amb-blob amb-blob--1"></div>
+  <div class="amb-blob amb-blob--2"></div>
+  <div class="amb-blob amb-blob--3"></div>
+  <div class="noise-overlay"></div>
+</div>
+
+<!-- ░░░░ UPLOAD SCREEN ░░░░ -->
+<div id="screen-upload" class="screen active">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+            <path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <span class="brand-name">TalentIQ</span>
+        <span class="brand-ver">v4.0</span>
+      </div>
     </div>
-    <nav>
-      <a href="#about">About</a>
-      <a href="#features">Features</a>
-      <a href="#gallery">Gallery</a>
-      <a href="#contact">Contact</a>
-    </nav>
+    <div class="topbar-right">
+      <div class="status-chip">
+        <span class="status-dot"></span>
+        <span>Llama 3.3 · 70B</span>
+      </div>
+      <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
   </header>
 
-  <section class="hero">
-    <div>
-      <h1>Your Mind is the Resume</h1>
-      <p>Experience hiring redefined through brain-computer interface and AI-driven behavioral intelligence.</p>
+  <main class="upload-main">
+    <div class="upload-grid">
+
+      <!-- Left: Hero -->
+      <div class="hero-col">
+        <div class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          AI Talent Intelligence
+        </div>
+        <h1 class="hero-h1">
+          <span class="hero-line" data-delay="0">Hire smarter.</span>
+          <span class="hero-line hero-line--italic" data-delay="120">Move faster.</span>
+          <span class="hero-line hero-line--dim" data-delay="240">Miss nothing.</span>
+        </h1>
+        <p class="hero-p">The world's most advanced resume intelligence engine — deep semantic parsing, calibrated ATS scoring, bias auditing, and AI-powered recruitment workflows in one platform.</p>
+
+        <div class="feature-grid">
+          <div class="feat-card">
+            <div class="feat-icon feat-icon--blue">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.3.5-2.4 2.3.56 3.3L7 8.6 4.04 10.1l.56-3.3L2.2 4.5l3.3-.5L7 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">6-Axis ATS Scoring</p>
+              <p class="feat-desc">Calibrated, inflation-resistant scores</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon feat-icon--teal">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4 7l2 2 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">JD Alignment</p>
+              <p class="feat-desc">Real vs buzz skill validation</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon feat-icon--violet">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">33+ Interview Questions</p>
+              <p class="feat-desc">6 categories, role-specific</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon feat-icon--amber">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1 12c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4M10 2.5l1 1 2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">Ethical Bias Audit</p>
+              <p class="feat-desc">PII detection, fairness scoring</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon feat-icon--green">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 9.5L4 6.5l2.5 2 3.5-5 2.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 12h11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">Impact Quantification</p>
+              <p class="feat-desc">Measurable achievement scoring</p>
+            </div>
+          </div>
+          <div class="feat-card feat-card--new">
+            <div class="feat-icon feat-icon--pink">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v3M7 9.5v3M1.5 7h3M9.5 7h3M3 3l2 2M9 9l2 2M3 11l2-2M9 5l2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <p class="feat-title">Recruitment Agent <span class="new-badge">New</span></p>
+              <p class="feat-desc">Pipeline, JD Generator, Decisions</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="trust-row">
+          <span class="trust-chip">Zero data retention</span>
+          <span class="trust-sep">·</span>
+          <span class="trust-chip">Groq LPU inference</span>
+          <span class="trust-sep">·</span>
+          <span class="trust-chip">FastAPI backend</span>
+        </div>
+      </div>
+
+      <!-- Right: Form Panel -->
+      <div class="upload-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Start Analysis</h2>
+          <span class="panel-sub">Average 45 seconds</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="field-group">
+            <label class="field-label">Resume <span class="req-badge">PDF</span></label>
+            <div class="dropzone" id="drop-zone">
+              <input type="file" id="file-input" accept=".pdf" hidden>
+              <div class="dz-idle" id="dz-idle">
+                <div class="dz-upload-icon">
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3v12M7 7l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 16v2a1 1 0 001 1h14a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <p class="dz-primary">Drop PDF here or <button class="dz-browse" onclick="document.getElementById('file-input').click()">browse</button></p>
+                <p class="dz-hint">Maximum 10 MB · Encrypted in transit</p>
+              </div>
+              <div class="dz-ready hidden" id="dz-ready">
+                <div class="dz-file-icon">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="1" width="11" height="16" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 9h6M5 12h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M10 1v5h5" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="dz-file-info">
+                  <span class="dz-file-name" id="dz-file-name"></span>
+                  <span class="dz-file-size" id="dz-file-size"></span>
+                </div>
+                <button class="dz-remove" id="dz-remove" onclick="removeFile()">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="jd-input">
+              Job Description
+              <span class="optional-badge">Optional</span>
+            </label>
+            <textarea id="jd-input" class="jd-input" placeholder="Paste a job description to unlock role-specific alignment scoring, skill gap analysis, and targeted interview questions…"></textarea>
+          </div>
+
+          <button class="run-btn" id="run-btn" onclick="startAnalysis()" disabled>
+            <span class="run-btn-inner">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5l4 2-4 2V5.5z" fill="currentColor"/></svg>
+              <span id="run-btn-text">Select a resume to begin</span>
+            </span>
+            <span class="run-btn-shimmer"></span>
+          </button>
+
+          <div id="upload-error-hint" class="upload-error-hint hidden"></div>
+        </div>
+      </div>
+
     </div>
-  </section>
+  </main>
+</div>
 
-  <section id="about" class="section">
-    <h2>What is Mindxcope?</h2>
-    <p>We leverage neuroscience and machine learning to revolutionize recruitment. Our platform decodes brain patterns and behavioral cues to uncover hidden talent potential far beyond traditional resumes.</p>
-  </section>
-
-  <section id="features" class="section">
-    <h2>Platform Features</h2>
-    <div class="feature-grid">
-      <div class="card">
-        <h3>BCI-Based Assessments</h3>
-        <p>Quantify real-time focus, stress, and creativity via EEG signals and biometric sensors.</p>
-      </div>
-      <div class="card">
-        <h3>AI Cognitive Profiling</h3>
-        <p>Analyze micro-behaviors and keystroke dynamics to assess personality traits.</p>
-      </div>
-      <div class="card">
-        <h3>Visual Decision Simulators</h3>
-        <p>Run gamified scenarios and measure logical ability, empathy, and reaction time.</p>
+<!-- ░░░░ LOADING SCREEN ░░░░ -->
+<div id="screen-loading" class="screen">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
+        <span class="brand-name">TalentIQ</span>
+        <span class="brand-ver">v4.0</span>
       </div>
     </div>
-  </section>
-
-  <section id="gallery" class="section">
-    <h2>Inside the Mindxcope Experience</h2>
-    <div class="swiper">
-      <div class="swiper-wrapper">
-        <div class="swiper-slide"><img src="https://shorturl.at/YHxsp" /></div>
-        <div class="swiper-slide"><img src="https://shorturl.at/SnwS6" /></div>
-        <div class="swiper-slide"><img src="https://shorturl.at/aTOCR" /></div>
+    <div class="topbar-right">
+      <button class="theme-btn" onclick="toggleTheme()">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+  </header>
+  <main class="loading-main">
+    <div class="loading-wrap">
+      <div class="loading-visual">
+        <div class="lv-ring lv-ring--1"></div>
+        <div class="lv-ring lv-ring--2"></div>
+        <div class="lv-ring lv-ring--3"></div>
+        <div class="lv-core">
+          <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg>
+        </div>
+        <svg class="lv-progress" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="36" stroke="var(--line2)" stroke-width="2"/>
+          <circle cx="40" cy="40" r="36" stroke="var(--brand)" stroke-width="2" stroke-linecap="round"
+            stroke-dasharray="226" stroke-dashoffset="226" id="lv-progress-ring"/>
+        </svg>
+      </div>
+      <div class="loading-text">
+        <h2 class="loading-h2">Analysing candidate</h2>
+        <p class="loading-sub" id="loading-sub-text">Running intelligence modules…</p>
+      </div>
+      <div class="step-list">
+        <div class="step" id="ls1">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name" id="ls1-label">Connecting to server</span>
+            <span class="step-desc">Waking up inference engine</span>
+          </div>
+        </div>
+        <div class="step" id="ls2">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name">Semantic PDF parsing</span>
+            <span class="step-desc">Extracting structure, context and metadata</span>
+          </div>
+        </div>
+        <div class="step" id="ls3">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name">ATS scoring &amp; JD alignment</span>
+            <span class="step-desc">Six-dimensional scoring and role match analysis</span>
+          </div>
+        </div>
+        <div class="step" id="ls4">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name">Impact quantification</span>
+            <span class="step-desc">Detecting measurable achievements and substance</span>
+          </div>
+        </div>
+        <div class="step" id="ls5">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name">Interview pack generation</span>
+            <span class="step-desc">33 role-specific questions across six categories</span>
+          </div>
+        </div>
+        <div class="step" id="ls6">
+          <div class="step-indicator"><div class="step-dot"></div></div>
+          <div class="step-body">
+            <span class="step-name">Coaching &amp; bias audit</span>
+            <span class="step-desc">Upskilling roadmap and fairness evaluation</span>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
-<!-- Report Preview Section -->
-<section id="demo-report" style="padding: 1.5rem 0; text-align: center;">
-  <h2 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.75rem; font-weight: 600;">
-    Sample Report
-  </h2>
+  </main>
+</div>
 
-  <img
-    src="demo.png"
-    alt="MindXcope Report Preview"
-    style="width: 260px; height: auto; border-radius: 8px; box-shadow: 0 3px 12px rgba(0,0,0,0.1);"
-    loading="lazy"
-  />
+<!-- ░░░░ RESULTS SCREEN ░░░░ -->
+<div id="screen-results" class="screen results-layout">
 
-  <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; max-width: 320px; margin-inline: auto;">
-    A real preview of how MindXcope analyzes cognitive data to generate a report.
-  </p>
-</section>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-top">
+      <div class="sb-brand">
+        <div class="brand">
+          <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
+          <span class="brand-name">TalentIQ</span>
+        </div>
+        <button class="theme-btn" onclick="toggleTheme()">
+          <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+        </button>
+      </div>
 
+      <!-- Candidate card -->
+      <div class="sb-candidate">
+        <div class="sb-avatar" id="sb-avatar"></div>
+        <div class="sb-candidate-info">
+          <p class="sb-name" id="sb-name">—</p>
+          <p class="sb-role" id="sb-role">—</p>
+        </div>
+      </div>
 
-  <section id="contact" class="section">
-    <h2>Connect with Us</h2>
-    <form action="https://formspree.io/f/mvgrzdrb" method="POST" style="max-width: 600px; margin: 0 auto;">
-      <input type="text" name="name" placeholder="Your Name" required style="width: 100%; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ccc;">
-      <input type="email" name="email" placeholder="Your Email" required style="width: 100%; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ccc;">
-      <textarea name="message" placeholder="Your Message" rows="5" required style="width: 100%; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ccc;"></textarea>
-      <button type="submit" style="background: #1e40af; color: white; padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer;">Send</button>
-    </form>
-  </section>
+      <!-- Score strip -->
+      <div class="sb-scores">
+        <div class="sb-score-cell">
+          <span class="sb-score-val" id="sb-score">—</span>
+          <span class="sb-score-lbl">ATS</span>
+        </div>
+        <div class="sb-score-sep"></div>
+        <div class="sb-score-cell">
+          <span class="sb-score-val" id="sb-jd">—</span>
+          <span class="sb-score-lbl">JD Fit</span>
+        </div>
+        <div class="sb-score-sep"></div>
+        <div class="sb-score-cell">
+          <span class="sb-score-val" id="sb-yrs">—</span>
+          <span class="sb-score-lbl">Yrs</span>
+        </div>
+      </div>
+    </div>
 
-  <footer>
-    &copy; 2025 Mindxcope. All rights reserved.<br>Developed by Anurag</br>
-  </footer>
-  
+    <!-- Nav -->
+    <nav class="sb-nav">
+      <p class="nav-section">Analysis</p>
+      <button class="nav-btn active" data-tab="overview">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x=".5" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/></svg>
+        Overview
+      </button>
+      <button class="nav-btn" data-tab="ats">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 9l2.5-3 2 2L8 4l3 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11h10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+        ATS Scores
+      </button>
+      <button class="nav-btn" data-tab="skills">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor"/><circle cx="8.5" cy="8.5" r="2" stroke="currentColor"/><path d="M4 6v1.5M8.5 1v1.5M2 8.5h2M8.5 4h2" stroke="currentColor" stroke-linecap="round"/></svg>
+        Skills
+      </button>
+      <button class="nav-btn" data-tab="experience">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="3" width="11" height="8" rx="1" stroke="currentColor"/><path d="M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M.5 7h11" stroke="currentColor" stroke-linecap="round"/></svg>
+        Experience
+      </button>
+      <button class="nav-btn" data-tab="analysis">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.3 2.7 3 .4-2.15 2.1.5 3L6 7.8 3.35 9.2l.5-3L1.7 4.1l3-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
+        Strengths &amp; Gaps
+      </button>
+      <button class="nav-btn" data-tab="impact">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 9.5l2.5-3 2 2 2.5-4 2 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Impact Score
+      </button>
+      <button class="nav-btn" data-tab="realvsbuzz">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3.5-3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Real vs Buzz
+      </button>
+      <button class="nav-btn" data-tab="jdmatch">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3-3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        JD Match
+      </button>
+      <button class="nav-btn nav-btn--danger" data-tab="redflags">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5L1 10.5h10L6 1.5z" stroke="currentColor" stroke-linejoin="round"/><path d="M6 5.5V8" stroke="currentColor" stroke-linecap="round"/><circle cx="6" cy="9.5" r=".5" fill="currentColor"/></svg>
+        Red Flags
+      </button>
 
+      <p class="nav-section">Interview Pack</p>
+      <button class="nav-btn" data-tab="technical">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L1 6l2 3M9 3l2 3-2 3M7 2l-2 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Technical
+      </button>
+      <button class="nav-btn" data-tab="behavioral">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="3.5" r="2" stroke="currentColor"/><path d="M1.5 11c0-2 2-3.5 4.5-3.5S10.5 9 10.5 11" stroke="currentColor" stroke-linecap="round"/></svg>
+        Behavioural
+      </button>
+      <button class="nav-btn" data-tab="situational">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        Situational
+      </button>
+      <button class="nav-btn" data-tab="deepdive">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor"/><path d="M8 8l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Deep Dive
+      </button>
 
-  <button onclick="scrollToTop()" id="topBtn">↑ Top</button>
+      <p class="nav-section">Intelligence</p>
+      <button class="nav-btn nav-btn--special" data-tab="bias">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor"/><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.6 2.6l.7.7M8.7 8.7l.7.7M2.6 9.4l.7-.7M8.7 3.3l.7-.7" stroke="currentColor" stroke-linecap="round"/></svg>
+        Bias Audit
+      </button>
+      <button class="nav-btn nav-btn--special" data-tab="coaching">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9l3-7 3 7M4.5 6.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Coaching
+      </button>
+      <button class="nav-btn nav-btn--special" data-tab="outreach">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2.5" width="11" height="7" rx="1" stroke="currentColor"/><path d="M.5 3.5l5.5 3.5 5.5-3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Outreach
+      </button>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-  <script>
-    AOS.init();
+      <p class="nav-section">Recruitment Agent <span class="nav-new-badge">NEW</span></p>
+      <button class="nav-btn nav-btn--agent" data-tab="pipeline">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2" cy="2.5" r="1.5" stroke="currentColor"/><circle cx="2" cy="6" r="1.5" stroke="currentColor"/><circle cx="2" cy="9.5" r="1.5" stroke="currentColor"/><path d="M3.5 2.5h7M3.5 6h5M3.5 9.5h6" stroke="currentColor" stroke-linecap="round"/></svg>
+        Talent Pipeline
+      </button>
+      <button class="nav-btn nav-btn--agent" data-tab="jobgen">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor"/><path d="M3.5 4.5h5M3.5 6.5h3M7 8.5l1.5-1.5-1.5-1.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        JD Generator
+      </button>
+      <button class="nav-btn nav-btn--agent" data-tab="decision">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="5" stroke="currentColor"/></svg>
+        Hire Decision
+      </button>
+    </nav>
 
-    const swiper = new Swiper('.swiper', {
-      loop: true,
-      autoplay: {
-        delay: 2500,
-        disableOnInteraction: false,
-      },
-    });
+    <div class="sb-footer">
+      <button class="new-analysis-btn" onclick="resetApp()">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5a4.5 4.5 0 004.5 4.5 4.5 4.5 0 003.5-1.7M10 5.5A4.5 4.5 0 005.5 1 4.5 4.5 0 002 2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.5 3.5l1.5-1.5-1.5-1.5M2.5 7.5L1 9l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New Analysis
+      </button>
+    </div>
+  </aside>
 
-    const topBtn = document.getElementById("topBtn");
-    window.onscroll = () => {
-      topBtn.style.display = (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) ? "block" : "none";
-    };
-    function scrollToTop() {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  </script>
+  <!-- Results main -->
+  <div class="results-main" id="results-main">
+    <div class="results-topbar">
+      <div class="results-topbar-left">
+        <h1 class="results-h1">Candidate Intelligence Report</h1>
+        <p class="results-timestamp" id="results-timestamp"></p>
+      </div>
+      <div id="hire-badge" class="hire-badge"></div>
+    </div>
+    <div class="tab-content" id="tab-content"></div>
+  </div>
+
+</div>
+
+<!-- ░░░░ TOAST ░░░░ -->
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script src="app.js"></script>
 </body>
 </html>
-
-

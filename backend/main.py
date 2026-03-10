@@ -67,12 +67,17 @@ async def analyze_resume(
     resume_text = extract_text_from_pdf(content)
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
-    result = analyzer.analyze(resume_text, job_description)
+
+    # ✅ FIXED: was analyzer.analyze() — that returns only raw dict, not the
+    # full report the frontend needs. full_analysis() returns all 4 sections:
+    # analysis, interview_questions, bias_report, candidate_feedback
+    result = analyzer.full_analysis(resume_text, job_description)
     return result
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):
-    result = analyzer.generate_outreach_email(req.profile, req.job_title, req.company_name)
+    # ✅ FIXED: was generate_outreach_email() — correct name is generate_outreach()
+    result = analyzer.generate_outreach(req.profile, req.job_title, req.company_name)
     return result
 
 @app.post("/generate-feedback-letter")
@@ -82,7 +87,8 @@ async def generate_feedback_letter(req: FeedbackRequest):
 
 @app.post("/skill-adjacency")
 async def skill_adjacency(req: SkillAdjacencyRequest):
-    result = analyzer.assess_skill_adjacency(req.profile)
+    # ✅ FIXED: was assess_skill_adjacency() — correct name is skill_adjacency()
+    result = analyzer.skill_adjacency(req.profile)
     return result
 
 if __name__ == "__main__":

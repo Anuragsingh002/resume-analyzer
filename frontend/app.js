@@ -149,7 +149,7 @@ async function wakeUpServer(maxMs = 90000) {
   while (Date.now() - start < maxMs) {
     try {
       const ctrl = new AbortController();
-      const tid  = setTimeout(() => ctrl.abort(), 8000);
+      const tid  = setTimeout(() => ctrl.abort(), 25000);
       const r    = await fetch(`${API}/health`, { signal: ctrl.signal });
       clearTimeout(tid);
       if (r.ok || r.status === 404) return;

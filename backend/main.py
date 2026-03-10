@@ -33,6 +33,10 @@ app.add_middleware(
 
 # ─── Pydantic Models ────────────────────────────────────────
 
+class AgentRequest(BaseModel):
+    message: str
+    candidate_context: dict = {}
+
 class OutreachRequest(BaseModel):
     profile: dict
     job_title: str = "Software Engineer"
@@ -68,7 +72,9 @@ async def health():
 @app.post("/analyze")
 async def analyze_resume(
     file: UploadFile = File(...),
-    job_description: str = Form(default="")
+    job_description: str = Form(default=""),
+    target_role: str = Form(default=""),
+    company_name: str = Form(default="")
 ):
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
@@ -81,8 +87,16 @@ async def analyze_resume(
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
 
-    result = analyzer.analyze(resume_text, job_description)
+    result = analyzer.analyze(resume_text, job_description, target_role, company_name)
     return result
+
+@app.post("/agent")
+async def recruitment_agent(req: AgentRequest):
+    try:
+        result = analyzer.agent_chat(req.message, req.candidate_context)
+        return result
+    except Exception as e:
+        return {"response": f"Agent error: {str(e)}"}
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):

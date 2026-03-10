@@ -313,6 +313,12 @@ function tabOverview(a) {
   </div>
 
   <div class="ov-2col" style="margin-bottom:20px">
+    <div class="ov-2col" style="margin-bottom:20px">
+    ${a.career_velocity ? `<div>
+      <h3 class="sec-h">Career Velocity</h3>
+      <div style="margin-bottom:8px">${badge(a.career_velocity, a.career_velocity==='Accelerating'?'green':a.career_velocity==='Declining'?'red':a.career_velocity==='Plateauing'?'amber':'brand')}</div>
+      ${a.career_velocity_evidence ? `<p style="font-size:13px;color:var(--tx2);line-height:1.65">${esc(a.career_velocity_evidence)}</p>` : ''}
+    </div>` : '<div></div>'}
     ${(a.inferred_skills || []).length ? `<div>
       <h3 class="sec-h">Inferred Skills</h3>
       <p style="font-size:12px;color:var(--tx3);margin-bottom:10px">Not explicitly stated — strongly implied by experience.</p>
@@ -420,6 +426,42 @@ function tabATS(a) {
     </div>
   </div>
 
+  ${a.quantified_impact ? (() => {
+    const qi = a.quantified_impact;
+    const qcls = qi.score >= 68 ? 'bf-green' : qi.score >= 40 ? 'bf-amber' : 'bf-red';
+    const vColor = qi.verdict === 'Excellent' || qi.verdict === 'Good' ? 'var(--green)' :
+                   qi.verdict === 'Poor' || qi.verdict === 'Very Poor' ? 'var(--red)' : 'var(--amber)';
+    return `<div class="sec">
+    <h3 class="sec-h">Quantified Impact</h3>
+    <div class="card">
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
+        <div style="text-align:center;min-width:80px">
+          <div style="font-family:var(--fm);font-size:36px;font-weight:700;color:var(--tx1);line-height:1">${qi.score}</div>
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-top:4px">Score / 100</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:13px;color:var(--tx2)">${qi.quantified_bullets} of ${qi.total_bullets} bullets quantified (${qi.quantified_percentage}%)</span>
+            ${badge(qi.verdict, qi.verdict === 'Excellent' || qi.verdict === 'Good' ? 'green' : qi.verdict === 'Poor' || qi.verdict === 'Very Poor' ? 'red' : 'amber')}
+          </div>
+          <div class="bar-track" style="height:6px;margin-bottom:10px">
+            <div class="bar-fill ${qcls}" style="width:0%;height:6px;border-radius:3px" data-w="${qi.quantified_percentage}%"></div>
+          </div>
+          ${qi.improvement_tip ? `<p style="font-size:13px;color:var(--tx2);line-height:1.65">${esc(qi.improvement_tip)}</p>` : ''}
+        </div>
+      </div>
+      ${qi.strong_examples?.length ? `<div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:8px">Strong bullets (with metrics)</div>
+        ${qi.strong_examples.map(e => `<div class="qwin-item" style="border-left-color:var(--green)">${esc(e)}</div>`).join('')}
+      </div>` : ''}
+      ${qi.weak_examples?.length ? `<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--amber);margin-bottom:8px">Weak bullets (need metrics)</div>
+        ${qi.weak_examples.map(e => `<div class="qwin-item" style="border-left-color:var(--amber)">${esc(e)}</div>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>`;
+  })() : ''}
+
   <div class="sec">
     <h3 class="sec-h">Six-Axis Breakdown</h3>
     <div style="display:flex;flex-direction:column;gap:16px">
@@ -518,6 +560,31 @@ function tabStrGaps(a) {
   const gaps      = a.potential_gaps || [];
 
   return `
+  ${a.candidate_classification ? (() => {
+    const cc = a.candidate_classification;
+    const typeCls = cc.type === 'Proven' ? 'green' : cc.type === 'Overinflated' ? 'red' : 'brand';
+    const buzzCls = cc.buzz_word_rating === 'Substance-Rich' ? 'green' : cc.buzz_word_rating === 'Buzz-Heavy' ? 'red' : 'amber';
+    return `<div class="sec">
+    <h3 class="sec-h">Candidate Intelligence Report</h3>
+    <div class="card" style="border-left:3px solid var(--${typeCls === 'green' ? 'green' : typeCls === 'red' ? 'red' : 'brand'})">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        ${badge(cc.type, typeCls)}
+        ${badge(cc.buzz_word_rating, buzzCls)}
+        ${badge('Confidence: ' + cc.confidence, '')}
+      </div>
+      ${cc.evidence ? `<p style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:12px"><strong>Evidence:</strong> ${esc(cc.evidence)}</p>` : ''}
+      ${cc.substance_examples?.length ? `<div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:6px">Substance examples</div>
+        ${cc.substance_examples.map(e => `<div class="qwin-item" style="border-left-color:var(--green)">${esc(e)}</div>`).join('')}
+      </div>` : ''}
+      ${cc.buzz_examples?.length ? `<div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--red);margin-bottom:6px">Buzz-word examples</div>
+        ${cc.buzz_examples.map(e => `<div class="qwin-item" style="border-left-color:var(--red)">${esc(e)}</div>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>`;
+  })() : ''}
+
   <div class="sec">
     <h3 class="sec-h">Top Strengths</h3>
     <div class="sg-grid">
@@ -584,6 +651,13 @@ function tabJDMatch(a) {
       <div class="tags">${missing.map(s => badge(s, 'red')).join('') || '<p style="font-size:13px;color:var(--green)">No skill gaps found.</p>'}</div>
     </div>
   </div>
+
+  ${(a.jd_partial_skills || []).length ? `
+  <div class="sec">
+    <h3 class="sec-h">Partially Matched Skills</h3>
+    <p style="font-size:13px;color:var(--tx3);margin-bottom:12px">Present as keywords or buzzwords — but without demonstrated depth or project evidence. These do NOT count toward the match score.</p>
+    <div class="tags">${(a.jd_partial_skills || []).map(s => badge(s, 'amber')).join('')}</div>
+  </div>` : ''}
 
   ${a.jd_match_summary ? `
   <div class="sec">
@@ -840,6 +914,22 @@ function tabCoaching(co, a) {
   <div class="sec">
     <h3 class="sec-h">Career Advice</h3>
     <div class="callout callout-green"><em>${esc(co.career_advice)}</em></div>
+  </div>` : ''}
+
+  ${co.quantification_coaching?.bullet_rewrites?.length ? `
+  <div class="sec">
+    <h3 class="sec-h">Bullet Rewrite Coach</h3>
+    <p style="font-size:13px;color:var(--tx3);margin-bottom:14px">${esc(co.quantification_coaching.overall_tip || 'Transform vague claims into metric-backed achievements.')}</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${co.quantification_coaching.bullet_rewrites.map(r => `
+      <div class="card" style="padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--red);margin-bottom:6px">Original</div>
+        <p style="font-size:13px;color:var(--tx2);margin-bottom:12px;font-style:italic">${esc(r.original || '')}</p>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:6px">Improved</div>
+        <p style="font-size:13px;color:var(--tx1);margin-bottom:10px;font-weight:500">${esc(r.improved || '')}</p>
+        ${r.why_better ? `<p style="font-size:12px;color:var(--tx3)">${esc(r.why_better)}</p>` : ''}
+      </div>`).join('')}
+    </div>
   </div>` : ''}
 
   <!-- Feedback Letter Generator -->

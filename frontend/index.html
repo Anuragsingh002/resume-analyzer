@@ -1,431 +1,1004 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TalentIQ — AI Talent Intelligence Platform</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MINDXCOPE | Cognitive Hiring Platform</title>
+    
+    <!-- 1. External Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <!-- 2. Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 900: '#164e63', 950: '#083344' },
+                        amber: { 500: '#f59e0b', 600: '#d97706', 900: '#78350f' },
+                        emerald: { 500: '#10b981', 900: '#064e3b' },
+                        rose: { 500: '#f43f5e', 900: '#881337' },
+                        violet: { 400: '#a78bfa', 500: '#8b5cf6', 900: '#4c1d95', 950: '#2e1065' },
+                        indigo: { 500: '#6366f1', 900: '#312e81' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 12s linear infinite',
+                        'scan': 'scan 4s linear infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { top: '-10%' },
+                            '100%': { top: '110%' },
+                        }
+                    },
+                    cursor: {
+                        'none': 'none',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+        
+        body { 
+            background-color: #030305; 
+            color: #e5e5e5; 
+            overflow-x: hidden; 
+            cursor: none; /* Custom Cursor Logic */
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #030305; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 1s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .text-stroke-amber { -webkit-text-stroke: 1px #d97706; color: transparent; }
+        .text-stroke-violet { -webkit-text-stroke: 1px #8b5cf6; color: transparent; }
+        
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .glass-panel:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(6, 182, 212, 0.3);
+            transform: translateY(-5px);
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Custom Cursor */
+        .custom-cursor {
+            position: fixed; top: 0; left: 0; width: 20px; height: 20px;
+            border: 1px solid #22d3ee; border-radius: 50%; pointer-events: none;
+            z-index: 10000; transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            mix-blend-mode: difference;
+        }
+        .custom-cursor.hovered { width: 50px; height: 50px; background-color: rgba(34, 211, 238, 0.1); border-color: #22d3ee; }
+        .custom-cursor-dot {
+            position: fixed; top: 0; left: 0; width: 4px; height: 4px;
+            background-color: #22d3ee; border-radius: 50%; pointer-events: none;
+            z-index: 10001; transform: translate(-50%, -50%);
+        }
+
+        /* Preloader */
+        #preloader {
+            position: fixed; inset: 0; background: #000; z-index: 50000;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 0.8s ease-out;
+        }
+        .loader-bar { width: 200px; height: 2px; background: #333; margin-top: 20px; position: relative; overflow: hidden; }
+        .loader-progress { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #22d3ee; transition: width 0.5s; }
+        
+        /* Security Scanner Animation */
+        .security-line {
+            height: 2px;
+            width: 100%;
+            background: #8b5cf6;
+            box-shadow: 0 0 10px #8b5cf6;
+            animation: scan-vertical 2s linear infinite;
+        }
+        @keyframes scan-vertical {
+            0% { transform: translateY(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(200px); opacity: 0; }
+        }
+    </style>
 </head>
-<body>
+<body class="selection:bg-cyan-500/30 selection:text-white relative">
 
-<!-- ░░░░ AMBIENT ░░░░ -->
-<div class="ambient" aria-hidden="true">
-  <div class="amb-blob amb-blob--1"></div>
-  <div class="amb-blob amb-blob--2"></div>
-  <div class="amb-blob amb-blob--3"></div>
-  <div class="noise-overlay"></div>
-</div>
-
-<!-- ░░░░ UPLOAD SCREEN ░░░░ -->
-<div id="screen-upload" class="screen active">
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand">
-        <div class="brand-mark">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
-            <path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/>
-          </svg>
+    <!-- PRELOADER -->
+    <div id="preloader">
+        <div class="flex items-center gap-3">
+            <i data-lucide="brain" class="text-cyan-400 w-8 h-8 animate-pulse"></i>
+            <span class="text-white font-bold tracking-[0.3em] text-xl">MINDXCOPE</span>
         </div>
-        <span class="brand-name">TalentIQ</span>
-        <span class="brand-ver">v4.0</span>
-      </div>
+        <div class="loader-bar"><div class="loader-progress" id="loader-progress"></div></div>
+        <div class="font-mono text-cyan-500 text-xs mt-2" id="loader-text">INITIALIZING SENSORS...</div>
     </div>
-    <div class="topbar-right">
-      <div class="status-chip">
-        <span class="status-dot"></span>
-        <span>Llama 3.3 · 70B</span>
-      </div>
-      <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-        <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
-      </button>
-    </div>
-  </header>
 
-  <main class="upload-main">
-    <div class="upload-grid">
+    <!-- CURSOR -->
+    <div class="custom-cursor" id="cursor"></div>
+    <div class="custom-cursor-dot" id="cursor-dot"></div>
 
-      <!-- Left: Hero -->
-      <div class="hero-col">
-        <div class="hero-eyebrow">
-          <span class="eyebrow-dot"></span>
-          AI Talent Intelligence
-        </div>
-        <h1 class="hero-h1">
-          <span class="hero-line" data-delay="0">Hire smarter.</span>
-          <span class="hero-line hero-line--italic" data-delay="120">Move faster.</span>
-          <span class="hero-line hero-line--dim" data-delay="240">Miss nothing.</span>
-        </h1>
-        <p class="hero-p">The world's most advanced resume intelligence engine — deep semantic parsing, calibrated ATS scoring, bias auditing, and AI-powered recruitment workflows in one platform.</p>
+    <!-- BACKGROUND SIMULATION -->
+    <canvas id="neural-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-50"></canvas>
+    <div id="scroll-progress" class="fixed top-0 left-0 h-[2px] bg-gradient-to-r from-cyan-500 via-violet-500 to-amber-500 z-[100]" style="width: 0%"></div>
 
-        <div class="feature-grid">
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--blue">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.3.5-2.4 2.3.56 3.3L7 8.6 4.04 10.1l.56-3.3L2.2 4.5l3.3-.5L7 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">6-Axis ATS Scoring</p>
-              <p class="feat-desc">Calibrated, inflation-resistant scores</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--teal">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><path d="M4 7l2 2 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">JD Alignment</p>
-              <p class="feat-desc">Real vs buzz skill validation</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--violet">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">33+ Interview Questions</p>
-              <p class="feat-desc">6 categories, role-specific</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--amber">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1 12c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4M10 2.5l1 1 2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Ethical Bias Audit</p>
-              <p class="feat-desc">PII detection, fairness scoring</p>
-            </div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon feat-icon--green">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 9.5L4 6.5l2.5 2 3.5-5 2.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 12h11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Impact Quantification</p>
-              <p class="feat-desc">Measurable achievement scoring</p>
-            </div>
-          </div>
-          <div class="feat-card feat-card--new">
-            <div class="feat-icon feat-icon--pink">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v3M7 9.5v3M1.5 7h3M9.5 7h3M3 3l2 2M9 9l2 2M3 11l2-2M9 5l2-2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-            </div>
-            <div>
-              <p class="feat-title">Recruitment Agent <span class="new-badge">New</span></p>
-              <p class="feat-desc">Pipeline, JD Generator, Decisions</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="trust-row">
-          <span class="trust-chip">Zero data retention</span>
-          <span class="trust-sep">·</span>
-          <span class="trust-chip">Groq LPU inference</span>
-          <span class="trust-sep">·</span>
-          <span class="trust-chip">FastAPI backend</span>
-        </div>
-      </div>
-
-      <!-- Right: Form Panel -->
-      <div class="upload-panel">
-        <div class="panel-header">
-          <h2 class="panel-title">Start Analysis</h2>
-          <span class="panel-sub">Average 45 seconds</span>
-        </div>
-        <div class="panel-body">
-
-          <div class="field-group">
-            <label class="field-label">Resume <span class="req-badge">PDF</span></label>
-            <div class="dropzone" id="drop-zone">
-              <input type="file" id="file-input" accept=".pdf" hidden>
-              <div class="dz-idle" id="dz-idle">
-                <div class="dz-upload-icon">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3v12M7 7l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 16v2a1 1 0 001 1h14a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <!-- NAVIGATION -->
+    <nav class="fixed w-full z-50 border-b border-white/5 bg-[#030305]/90 backdrop-blur-xl transition-all duration-300">
+        <div class="container mx-auto px-6 h-20 flex justify-between items-center">
+            <div class="flex items-center gap-3 group cursor-pointer hover-trigger">
+                <div class="relative w-10 h-10 flex items-center justify-center bg-white/5 rounded-sm border border-white/10 group-hover:border-cyan-500/50 transition-colors">
+                    <i data-lucide="brain" class="text-cyan-400 w-5 h-5"></i>
                 </div>
-                <p class="dz-primary">Drop PDF here or <button class="dz-browse" onclick="document.getElementById('file-input').click()">browse</button></p>
-                <p class="dz-hint">Maximum 10 MB · Encrypted in transit</p>
-              </div>
-              <div class="dz-ready hidden" id="dz-ready">
-                <div class="dz-file-icon">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="1" width="11" height="16" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 9h6M5 12h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M10 1v5h5" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tighter text-white leading-none">MINDXCOPE</h1>
+                    <span class="text-[9px] font-mono text-cyan-500 tracking-[0.2em] uppercase block mt-1">Recruitment OS</span>
                 </div>
-                <div class="dz-file-info">
-                  <span class="dz-file-name" id="dz-file-name"></span>
-                  <span class="dz-file-size" id="dz-file-size"></span>
-                </div>
-                <button class="dz-remove" id="dz-remove" onclick="removeFile()">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+
+            <div class="hidden lg:flex items-center gap-8">
+                <a href="#solutions" class="hover-trigger text-[11px] font-bold font-mono uppercase tracking-widest text-cyan-400 border-b border-cyan-500/50 pb-1">Cognitive Hiring</a>
+                <a href="#benefits" class="hover-trigger text-[11px] font-bold font-mono uppercase tracking-widest text-neutral-400 hover:text-white transition-colors">ROI & Benefits</a>
+                <a href="#technology" class="hover-trigger text-[11px] font-bold font-mono uppercase tracking-widest text-neutral-400 hover:text-white transition-colors">Architecture</a>
+                <a href="#team" class="hover-trigger text-[11px] font-bold font-mono uppercase tracking-widest text-neutral-400 hover:text-white transition-colors">Team</a>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <button onclick="openModal('demo')" class="hover-trigger hidden lg:flex items-center gap-2 bg-white text-black px-5 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all">
+                    <i data-lucide="user-plus" class="w-3 h-3"></i> Book Hiring Demo
                 </button>
-              </div>
+                <button class="hover-trigger lg:hidden text-white" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"><i data-lucide="menu"></i></button>
             </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" for="jd-input">
-              Job Description
-              <span class="optional-badge">Optional</span>
-            </label>
-            <textarea id="jd-input" class="jd-input" placeholder="Paste a job description to unlock role-specific alignment scoring, skill gap analysis, and targeted interview questions…"></textarea>
-          </div>
-
-          <button class="run-btn" id="run-btn" onclick="startAnalysis()" disabled>
-            <span class="run-btn-inner">
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5l4 2-4 2V5.5z" fill="currentColor"/></svg>
-              <span id="run-btn-text">Select a resume to begin</span>
-            </span>
-            <span class="run-btn-shimmer"></span>
-          </button>
-
-          <div id="upload-error-hint" class="upload-error-hint hidden"></div>
         </div>
-      </div>
-
-    </div>
-  </main>
-</div>
-
-<!-- ░░░░ LOADING SCREEN ░░░░ -->
-<div id="screen-loading" class="screen">
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand">
-        <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
-        <span class="brand-name">TalentIQ</span>
-        <span class="brand-ver">v4.0</span>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <button class="theme-btn" onclick="toggleTheme()">
-        <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
-      </button>
-    </div>
-  </header>
-  <main class="loading-main">
-    <div class="loading-wrap">
-      <div class="loading-visual">
-        <div class="lv-ring lv-ring--1"></div>
-        <div class="lv-ring lv-ring--2"></div>
-        <div class="lv-ring lv-ring--3"></div>
-        <div class="lv-core">
-          <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg>
+        <div id="mobile-menu" class="hidden lg:hidden bg-black border-b border-white/10 p-4 absolute w-full">
+            <a href="#solutions" class="block py-2 text-cyan-400 font-bold">COGNITIVE HIRING</a>
+            <a href="#benefits" class="block py-2 text-neutral-400">BENEFITS</a>
+            <a href="#technology" class="block py-2 text-neutral-400">ARCHITECTURE</a>
+            <a href="#team" class="block py-2 text-neutral-400">TEAM</a>
         </div>
-        <svg class="lv-progress" viewBox="0 0 80 80" fill="none">
-          <circle cx="40" cy="40" r="36" stroke="var(--line2)" stroke-width="2"/>
-          <circle cx="40" cy="40" r="36" stroke="var(--brand)" stroke-width="2" stroke-linecap="round"
-            stroke-dasharray="226" stroke-dashoffset="226" id="lv-progress-ring"/>
-        </svg>
-      </div>
-      <div class="loading-text">
-        <h2 class="loading-h2">Analysing candidate</h2>
-        <p class="loading-sub" id="loading-sub-text">Running intelligence modules…</p>
-      </div>
-      <div class="step-list">
-        <div class="step" id="ls1">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name" id="ls1-label">Connecting to server</span>
-            <span class="step-desc">Waking up inference engine</span>
-          </div>
-        </div>
-        <div class="step" id="ls2">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Semantic PDF parsing</span>
-            <span class="step-desc">Extracting structure, context and metadata</span>
-          </div>
-        </div>
-        <div class="step" id="ls3">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">ATS scoring &amp; JD alignment</span>
-            <span class="step-desc">Six-dimensional scoring and role match analysis</span>
-          </div>
-        </div>
-        <div class="step" id="ls4">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Impact quantification</span>
-            <span class="step-desc">Detecting measurable achievements and substance</span>
-          </div>
-        </div>
-        <div class="step" id="ls5">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Interview pack generation</span>
-            <span class="step-desc">33 role-specific questions across six categories</span>
-          </div>
-        </div>
-        <div class="step" id="ls6">
-          <div class="step-indicator"><div class="step-dot"></div></div>
-          <div class="step-body">
-            <span class="step-name">Coaching &amp; bias audit</span>
-            <span class="step-desc">Upskilling roadmap and fairness evaluation</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-</div>
-
-<!-- ░░░░ RESULTS SCREEN ░░░░ -->
-<div id="screen-results" class="screen results-layout">
-
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-top">
-      <div class="sb-brand">
-        <div class="brand">
-          <div class="brand-mark"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L13.5 4.5V10.5L7.5 14L1.5 10.5V4.5L7.5 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7.5 4.5L10.5 6.25V9.75L7.5 11.5L4.5 9.75V6.25L7.5 4.5Z" fill="currentColor"/></svg></div>
-          <span class="brand-name">TalentIQ</span>
-        </div>
-        <button class="theme-btn" onclick="toggleTheme()">
-          <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1M7 12v1M1 7H2M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-          <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 016.5 13 5.5 5.5 0 011 7.5 5.5 5.5 0 016.5 2a5.5 5.5 0 015.5 5.5z" stroke="currentColor" stroke-width="1.2"/></svg>
-        </button>
-      </div>
-
-      <!-- Candidate card -->
-      <div class="sb-candidate">
-        <div class="sb-avatar" id="sb-avatar"></div>
-        <div class="sb-candidate-info">
-          <p class="sb-name" id="sb-name">—</p>
-          <p class="sb-role" id="sb-role">—</p>
-        </div>
-      </div>
-
-      <!-- Score strip -->
-      <div class="sb-scores">
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-score">—</span>
-          <span class="sb-score-lbl">ATS</span>
-        </div>
-        <div class="sb-score-sep"></div>
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-jd">—</span>
-          <span class="sb-score-lbl">JD Fit</span>
-        </div>
-        <div class="sb-score-sep"></div>
-        <div class="sb-score-cell">
-          <span class="sb-score-val" id="sb-yrs">—</span>
-          <span class="sb-score-lbl">Yrs</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Nav -->
-    <nav class="sb-nav">
-      <p class="nav-section">Analysis</p>
-      <button class="nav-btn active" data-tab="overview">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y=".5" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x=".5" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx=".8" stroke="currentColor"/></svg>
-        Overview
-      </button>
-      <button class="nav-btn" data-tab="ats">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 9l2.5-3 2 2L8 4l3 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11h10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
-        ATS Scores
-      </button>
-      <button class="nav-btn" data-tab="skills">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor"/><circle cx="8.5" cy="8.5" r="2" stroke="currentColor"/><path d="M4 6v1.5M8.5 1v1.5M2 8.5h2M8.5 4h2" stroke="currentColor" stroke-linecap="round"/></svg>
-        Skills
-      </button>
-      <button class="nav-btn" data-tab="experience">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="3" width="11" height="8" rx="1" stroke="currentColor"/><path d="M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M.5 7h11" stroke="currentColor" stroke-linecap="round"/></svg>
-        Experience
-      </button>
-      <button class="nav-btn" data-tab="analysis">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.3 2.7 3 .4-2.15 2.1.5 3L6 7.8 3.35 9.2l.5-3L1.7 4.1l3-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
-        Strengths &amp; Gaps
-      </button>
-      <button class="nav-btn" data-tab="impact">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 9.5l2.5-3 2 2 2.5-4 2 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Impact Score
-      </button>
-      <button class="nav-btn" data-tab="realvsbuzz">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3.5-3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Real vs Buzz
-      </button>
-      <button class="nav-btn" data-tab="jdmatch">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M3.5 6l2 2 3-3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        JD Match
-      </button>
-      <button class="nav-btn nav-btn--danger" data-tab="redflags">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5L1 10.5h10L6 1.5z" stroke="currentColor" stroke-linejoin="round"/><path d="M6 5.5V8" stroke="currentColor" stroke-linecap="round"/><circle cx="6" cy="9.5" r=".5" fill="currentColor"/></svg>
-        Red Flags
-      </button>
-
-      <p class="nav-section">Interview Pack</p>
-      <button class="nav-btn" data-tab="technical">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L1 6l2 3M9 3l2 3-2 3M7 2l-2 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Technical
-      </button>
-      <button class="nav-btn" data-tab="behavioral">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="3.5" r="2" stroke="currentColor"/><path d="M1.5 11c0-2 2-3.5 4.5-3.5S10.5 9 10.5 11" stroke="currentColor" stroke-linecap="round"/></svg>
-        Behavioural
-      </button>
-      <button class="nav-btn" data-tab="situational">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-        Situational
-      </button>
-      <button class="nav-btn" data-tab="deepdive">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor"/><path d="M8 8l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Deep Dive
-      </button>
-
-      <p class="nav-section">Intelligence</p>
-      <button class="nav-btn nav-btn--special" data-tab="bias">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor"/><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.6 2.6l.7.7M8.7 8.7l.7.7M2.6 9.4l.7-.7M8.7 3.3l.7-.7" stroke="currentColor" stroke-linecap="round"/></svg>
-        Bias Audit
-      </button>
-      <button class="nav-btn nav-btn--special" data-tab="coaching">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9l3-7 3 7M4.5 6.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Coaching
-      </button>
-      <button class="nav-btn nav-btn--special" data-tab="outreach">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2.5" width="11" height="7" rx="1" stroke="currentColor"/><path d="M.5 3.5l5.5 3.5 5.5-3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Outreach
-      </button>
-
-      <p class="nav-section">Recruitment Agent <span class="nav-new-badge">NEW</span></p>
-      <button class="nav-btn nav-btn--agent" data-tab="pipeline">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2" cy="2.5" r="1.5" stroke="currentColor"/><circle cx="2" cy="6" r="1.5" stroke="currentColor"/><circle cx="2" cy="9.5" r="1.5" stroke="currentColor"/><path d="M3.5 2.5h7M3.5 6h5M3.5 9.5h6" stroke="currentColor" stroke-linecap="round"/></svg>
-        Talent Pipeline
-      </button>
-      <button class="nav-btn nav-btn--agent" data-tab="jobgen">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor"/><path d="M3.5 4.5h5M3.5 6.5h3M7 8.5l1.5-1.5-1.5-1.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        JD Generator
-      </button>
-      <button class="nav-btn nav-btn--agent" data-tab="decision">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6" r="5" stroke="currentColor"/></svg>
-        Hire Decision
-      </button>
     </nav>
 
-    <div class="sb-footer">
-      <button class="new-analysis-btn" onclick="resetApp()">
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5a4.5 4.5 0 004.5 4.5 4.5 4.5 0 003.5-1.7M10 5.5A4.5 4.5 0 005.5 1 4.5 4.5 0 002 2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.5 3.5l1.5-1.5-1.5-1.5M2.5 7.5L1 9l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        New Analysis
-      </button>
+    <!-- HERO SECTION -->
+    <header class="relative pt-40 pb-24 lg:pt-60 lg:pb-32 z-10 overflow-hidden">
+        <div class="container mx-auto px-6">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="relative z-10">
+                    <div class="flex items-center gap-4 mb-8 reveal active">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-sm border border-cyan-500/30 bg-cyan-950/10 shadow-[0_0_10px_rgba(6,182,212,0.2)] backdrop-blur-md">
+                            <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></div>
+                            <span class="font-mono text-[10px] tracking-widest uppercase text-cyan-500">Recruitment Intelligence</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-neutral-600 uppercase tracking-widest">Platform V2.4</span>
+                    </div>
+                    <h1 class="text-5xl md:text-7xl lg:text-8xl font-light tracking-tighter text-white leading-[0.9] mb-8">
+                        <span class="block text-neutral-500 scramble-text" data-text="QUANTIFY">QUANTIFY</span>
+                        <span class="block text-white">HUMAN</span>
+                        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-indigo-500 font-medium">POTENTIAL</span>
+                    </h1>
+                    <p class="text-lg text-neutral-400 max-w-xl leading-relaxed mb-10 border-l-2 border-white/10 pl-6 bg-black/20 backdrop-blur-sm p-4 rounded-r-lg">
+                        Fusing biological signals with digital behavior to create the <strong>highest-fidelity model of human potential</strong> ever built. Identify <strong>Problem Solvers, Innovators, and Resilient Leaders</strong> with 99.4% accuracy.
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="openModal('screening')" class="hover-trigger px-8 py-4 bg-cyan-600 text-white font-mono text-xs uppercase tracking-widest hover:bg-cyan-500 transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center gap-2">
+                            Start Candidate Screening <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HERO WIDGET -->
+                <div class="relative reveal delay-200 hidden lg:block">
+                    <div class="absolute inset-0 bg-cyan-500/10 blur-[100px] rounded-full"></div>
+                    <div class="relative border border-cyan-500/30 bg-black/80 backdrop-blur-xl p-6 w-full max-w-lg ml-auto rounded-lg shadow-2xl">
+                        <div class="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
+                            <div>
+                                <div class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-1">Live Assessment</div>
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="user-check" class="text-cyan-400 w-5 h-5"></i>
+                                    <span class="text-lg font-bold text-white">CANDIDATE #8942</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-1">Rank</div>
+                                <span class="text-emerald-400 font-mono font-bold text-xl">TOP 1%</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-8 gap-y-4 font-mono text-[10px]">
+                            <!-- Metrics -->
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-cyan-400">FLUID IQ & LOGIC</span><span class="text-white">135+</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-cyan-500 h-full w-[98%]"></div></div></div>
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-violet-400">CREATIVITY</span><span class="text-white">VERY HIGH</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-violet-500 h-full w-[94%]"></div></div></div>
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-emerald-400">STRESS HANDLING</span><span class="text-white">ELITE</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-emerald-500 h-full w-[96%]"></div></div></div>
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-indigo-400">ATTENTION SPAN</span><span class="text-white">45m+</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-indigo-500 h-full w-[90%]"></div></div></div>
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-amber-400">DECISION SPEED</span><span class="text-white">12ms</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-amber-500 h-full w-[99%]"></div></div></div>
+                            <div class="group cursor-default"><div class="flex justify-between mb-1"><span class="text-neutral-400 group-hover:text-rose-400">WORKING MEMORY</span><span class="text-white">SUPERIOR</span></div><div class="w-full bg-neutral-800 h-1 rounded-full"><div class="bg-rose-500 h-full w-[95%]"></div></div></div>
+                        </div>
+                        <div id="visualizer-bars" class="mt-6 h-12 border-t border-white/5 bg-black/30 relative overflow-hidden flex items-end gap-1 pt-2"></div>
+                        <div class="mt-2 text-[9px] font-mono text-cyan-600 text-center uppercase tracking-widest"><i data-lucide="check-circle" class="w-3 h-3 inline mr-1"></i> Recommendation: IMMEDIATE HIRE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- NEW SECTION: HARDWARE ECOSYSTEM -->
+    <div class="w-full border-y border-white/5 bg-[#08080a] py-8 z-10 relative overflow-hidden">
+        <div class="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <span class="text-neutral-500 font-mono text-xs uppercase tracking-widest whitespace-nowrap">Hardware Compatible With:</span>
+            <div class="flex flex-wrap justify-center gap-8 md:gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                <div class="flex items-center gap-2 hover-trigger"><i data-lucide="cpu" class="w-5 h-5 text-white"></i> <span class="font-bold text-white text-lg tracking-tight">EMOTIV</span></div>
+                <div class="flex items-center gap-2 hover-trigger"><i data-lucide="headphones" class="w-5 h-5 text-white"></i> <span class="font-bold text-white text-lg tracking-tight">MUSE</span></div>
+                <div class="flex items-center gap-2 hover-trigger"><i data-lucide="eye" class="w-5 h-5 text-white"></i> <span class="font-bold text-white text-lg tracking-tight">TOBII</span></div>
+                <div class="flex items-center gap-2 hover-trigger"><i data-lucide="activity" class="w-5 h-5 text-white"></i> <span class="font-bold text-white text-lg tracking-tight">OpenBCI</span></div>
+                <div class="flex items-center gap-2 hover-trigger"><i data-lucide="gamepad-2" class="w-5 h-5 text-white"></i> <span class="font-bold text-white text-lg tracking-tight">NVIDIA</span></div>
+            </div>
+        </div>
     </div>
-  </aside>
 
-  <!-- Results main -->
-  <div class="results-main" id="results-main">
-    <div class="results-topbar">
-      <div class="results-topbar-left">
-        <h1 class="results-h1">Candidate Intelligence Report</h1>
-        <p class="results-timestamp" id="results-timestamp"></p>
-      </div>
-      <div id="hire-badge" class="hire-badge"></div>
+    <!-- SOLUTIONS (COMPACT) -->
+    <section id="solutions" class="py-16 bg-gradient-to-b from-[#030305] to-[#080c14] border-t border-white/5 z-20 relative">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center gap-4 mb-8 reveal">
+                <div class="h-px bg-cyan-500 w-12"></div>
+                <span class="text-cyan-500 font-mono text-sm tracking-[0.2em] uppercase">Flagship Solution</span>
+            </div>
+            <div class="relative group rounded-xl p-px bg-gradient-to-br from-cyan-500/50 to-indigo-600/50 reveal">
+                <div class="relative bg-[#050507] rounded-xl p-8 overflow-hidden">
+                    <div class="absolute top-0 right-0 w-1/3 h-full opacity-10 bg-gradient-to-l from-cyan-400 to-transparent"></div>
+                    <div class="flex flex-col md:flex-row gap-8 items-center relative z-10">
+                        <div class="flex-1">
+                            <h2 class="text-3xl font-bold text-white mb-4">Cognitive Hiring.</h2>
+                            <p class="text-sm text-neutral-400 mb-6 leading-relaxed max-w-xl">
+                                Traditional interviews are biased. Mindxcope provides a <strong>scientific cognitive audit</strong> of candidates using biosignals.
+                            </p>
+                            <div class="mb-6">
+                                <span class="text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-2 block">Dimensions Analyzed</span>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-cyan-400">Fluid IQ</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-violet-400">Creativity</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-emerald-400">Stress Handling</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-amber-400">Decision Speed</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-rose-400">Working Memory</span>
+                                </div>
+                            </div>
+                            <button onclick="openModal('case-studies')" class="hover-trigger bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">See Hiring Case Studies</button>
+                        </div>
+                        <div class="hidden md:flex w-full md:w-1/3 h-48 border border-white/10 rounded bg-black/50 items-center justify-center">
+                            <div class="text-center"><i data-lucide="users" class="w-12 h-12 text-cyan-500/50 mx-auto mb-2"></i><div class="font-mono text-cyan-400 text-xs">MATCHING CANDIDATES...</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW: HOW IT WORKS -->
+    <section class="py-16 bg-[#030305] z-10 relative">
+        <div class="container mx-auto px-6">
+            <h3 class="text-neutral-500 font-mono text-sm tracking-[0.2em] uppercase mb-12 text-center">Implementation Workflow</h3>
+            <div class="grid md:grid-cols-3 gap-8 text-center relative">
+                <div class="hidden md:block absolute top-8 left-0 w-full h-px bg-white/10 z-0"></div>
+                <div class="reveal relative z-10">
+                    <div class="w-16 h-16 bg-[#0a0a0c] border border-white/10 rounded-full flex items-center justify-center text-cyan-400 mx-auto mb-6 text-xl font-bold font-mono">01</div>
+                    <h4 class="text-white font-bold mb-2">Equip & Calibrate</h4>
+                    <p class="text-xs text-neutral-400 max-w-xs mx-auto">Candidate puts on standard EEG/fNIRS headset and GSR mouse. 2-minute AI calibration.</p>
+                </div>
+                <div class="reveal delay-100 relative z-10">
+                    <div class="w-16 h-16 bg-[#0a0a0c] border border-white/10 rounded-full flex items-center justify-center text-indigo-400 mx-auto mb-6 text-xl font-bold font-mono">02</div>
+                    <h4 class="text-white font-bold mb-2">Cognitive Tasks</h4>
+                    <p class="text-xs text-neutral-400 max-w-xs mx-auto">Candidate plays 20 minutes of gamified N-Back and logic puzzles while sensors record.</p>
+                </div>
+                <div class="reveal delay-200 relative z-10">
+                    <div class="w-16 h-16 bg-[#0a0a0c] border border-white/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-6 text-xl font-bold font-mono">03</div>
+                    <h4 class="text-white font-bold mb-2">Instant Profile</h4>
+                    <p class="text-xs text-neutral-400 max-w-xs mx-auto">Dashboard generates 50+ cognitive metrics and a "Fit Score" for the specific role.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- STRATEGIC ADVANTAGE (COMPACT) -->
+    <section id="benefits" class="py-12 bg-[#030305] z-10 relative border-t border-white/5">
+        <div class="container mx-auto px-6">
+            <div class="flex justify-between items-end mb-6 reveal">
+                <div><h3 class="text-neutral-500 font-mono text-sm tracking-[0.2em] uppercase mb-1">Why Mindxcope?</h3><h2 class="text-2xl font-bold text-white">The Unfair Advantage.</h2></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="reveal p-5 border border-white/5 bg-[#0a0a0c] rounded-xl hover:border-cyan-500/30 transition-colors group">
+                    <div class="flex items-center justify-between mb-2"><h4 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Predictive Accuracy</h4><i data-lucide="crosshair" class="w-4 h-4 text-cyan-500"></i></div>
+                    <div class="text-3xl font-bold text-white mb-2">94%</div>
+                    <p class="text-[10px] text-neutral-500 leading-snug">Vs. 60% for traditional resumes and interviews.</p>
+                </div>
+                <div class="reveal delay-100 p-5 border border-white/5 bg-[#0a0a0c] rounded-xl hover:border-rose-500/30 transition-colors group">
+                    <div class="flex items-center justify-between mb-2"><h4 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Algorithmic Bias</h4><i data-lucide="scale" class="w-4 h-4 text-rose-500"></i></div>
+                    <div class="text-3xl font-bold text-white mb-2">0%</div>
+                    <p class="text-[10px] text-neutral-500 leading-snug">Pure meritocracy based on cognitive signal processing.</p>
+                </div>
+                <div class="reveal delay-200 p-5 border border-white/5 bg-[#0a0a0c] rounded-xl hover:border-emerald-500/30 transition-colors group">
+                    <div class="flex items-center justify-between mb-2"><h4 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Hiring Speed</h4><i data-lucide="zap" class="w-4 h-4 text-emerald-500"></i></div>
+                    <div class="text-3xl font-bold text-white mb-2">3x</div>
+                    <p class="text-[10px] text-neutral-500 leading-snug">Replace weeks of screening with a 30-min assessment.</p>
+                </div>
+                <div class="reveal delay-300 p-5 border border-white/5 bg-[#0a0a0c] rounded-xl hover:border-amber-500/30 transition-colors group">
+                    <div class="flex items-center justify-between mb-2"><h4 class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Retention Rate</h4><i data-lucide="users" class="w-4 h-4 text-amber-500"></i></div>
+                    <div class="text-3xl font-bold text-white mb-2">+40%</div>
+                    <p class="text-[10px] text-neutral-500 leading-snug">Candidates hired for cognitive fit stay longer.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section id="technology" class="py-24 bg-[#030305] z-10 relative">
+        <div class="container mx-auto px-6">
+            <div class="mb-16 relative pl-6 border-l border-neutral-800 reveal">
+                <span class="font-mono text-xs text-neutral-500 mb-2 block tracking-[0.2em]">03 // THE STACK</span>
+                <h2 class="text-4xl md:text-6xl font-light text-white mb-2 tracking-tight">The 9-Layer Architecture.</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-cyan-600 to-transparent mt-4"></div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Pillar 1 -->
+                <div class="reveal">
+                    <div class="border-b border-cyan-500/30 pb-4 mb-6"><h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="activity" class="text-cyan-500"></i> Neuro-Imaging</h3></div>
+                    <div class="space-y-3">
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-cyan-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">01</div><div><h4 class="text-sm font-bold text-white">Cortical Dynamics (EEG)</h4><p class="text-xs text-neutral-500 mt-1">Millisecond-precision electrical monitoring.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-cyan-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">02</div><div><h4 class="text-sm font-bold text-white">Hemodynamics (fNIRS)</h4><p class="text-xs text-neutral-500 mt-1">Prefrontal oxygenation & workload tracking.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-cyan-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">03</div><div><h4 class="text-sm font-bold text-white">Autonomic (GSR)</h4><p class="text-xs text-neutral-500 mt-1">Skin conductance for emotional stress peaks.</p></div></div>
+                    </div>
+                </div>
+                <!-- Pillar 2 -->
+                <div class="reveal delay-100">
+                    <div class="border-b border-indigo-500/30 pb-4 mb-6"><h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="mouse-pointer-2" class="text-indigo-500"></i> Behavioral Intel</h3></div>
+                    <div class="space-y-3">
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-indigo-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">04</div><div><h4 class="text-sm font-bold text-white">Oculometrics</h4><p class="text-xs text-neutral-500 mt-1">Eye tracking for gaze fixation & attention spans.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-indigo-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">05</div><div><h4 class="text-sm font-bold text-white">Keystroke Dynamics</h4><p class="text-xs text-neutral-500 mt-1">Typing cadence, rhythm, and hesitation analysis.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-indigo-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">06</div><div><h4 class="text-sm font-bold text-white">Motor Kinetics</h4><p class="text-xs text-neutral-500 mt-1">Mouse trajectory smoothness & reaction velocity.</p></div></div>
+                    </div>
+                </div>
+                <!-- Pillar 3 -->
+                <div class="reveal delay-200">
+                    <div class="border-b border-emerald-500/30 pb-4 mb-6"><h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="cpu" class="text-emerald-500"></i> Active & AI</h3></div>
+                    <div class="space-y-3">
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-emerald-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">07</div><div><h4 class="text-sm font-bold text-white">Active Games</h4><p class="text-xs text-neutral-500 mt-1">Gamified N-Back tasks for memory stress testing.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-emerald-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">08</div><div><h4 class="text-sm font-bold text-white">SciML Core</h4><p class="text-xs text-neutral-500 mt-1">Scientific Machine Learning for pattern extraction.</p></div></div>
+                        <div class="bg-white/[0.02] border border-white/5 p-4 flex items-start gap-4 hover:border-emerald-500/30 transition-colors"><div class="text-neutral-500 font-mono text-xs pt-1">09</div><div><h4 class="text-sm font-bold text-white">Predictive Engine</h4><p class="text-xs text-neutral-500 mt-1">Real-time performance forecasting & scoring.</p></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RESEARCH SECTION -->
+    <section id="research" class="py-20 bg-neutral-950/50 border-t border-white/5 z-10 relative">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12">
+                <div>
+                    <h3 class="text-neutral-500 font-mono text-sm tracking-[0.2em] uppercase mb-4">Scientific Validation</h3>
+                    <h2 class="text-3xl md:text-4xl font-bold text-white">Backed by Peer-Reviewed Research.</h2>
+                    <p class="text-neutral-400 mt-2 text-sm">Validating metrics for Fluid IQ, Creativity, Attention, and Decision Making.</p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2562905/" target="_blank" class="hover-trigger reveal glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="brain" class="text-cyan-500 w-4 h-4"></i> <span class="text-[10px] text-cyan-400 font-mono">FLUID IQ</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-cyan-400 transition-colors">"Correlating Prefrontal Hemodynamics with Fluid Intelligence (Gf)"</h4>
+                    <p class="text-xs text-neutral-500">Nature Scientific Reports</p>
+                </a>
+                <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3198250/" target="_blank" class="hover-trigger reveal delay-100 glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="lightbulb" class="text-violet-500 w-4 h-4"></i> <span class="text-[10px] text-violet-400 font-mono">CREATIVITY</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-violet-400 transition-colors">"EEG Alpha Synchronization and Divergent Thinking"</h4>
+                    <p class="text-xs text-neutral-500">NeuroImage</p>
+                </a>
+                <a href="https://www.nature.com/articles/s41598-025-01228-3" target="_blank" class="hover-trigger reveal delay-200 glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="activity" class="text-emerald-500 w-4 h-4"></i> <span class="text-[10px] text-emerald-400 font-mono">STRESS</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-emerald-400 transition-colors">"Multimodal Sensor Fusion (fNIRS + GSR) for Stress Detection"</h4>
+                    <p class="text-xs text-neutral-500">Sensors Journal</p>
+                </a>
+                <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11161351/" target="_blank" class="hover-trigger reveal glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="eye" class="text-indigo-500 w-4 h-4"></i> <span class="text-[10px] text-indigo-400 font-mono">ATTENTION</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-indigo-400 transition-colors">"Real-Time Decoding of Working Memory Load via Hybrid BCI"</h4>
+                    <p class="text-xs text-neutral-500">IEEE Biomedical</p>
+                </a>
+                <a href="https://arxiv.org/abs/2208.09061" target="_blank" class="hover-trigger reveal delay-100 glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="mouse-pointer-2" class="text-amber-500 w-4 h-4"></i> <span class="text-[10px] text-amber-400 font-mono">DECISION</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-amber-400 transition-colors">"Behavioral Biometrics in Decision Making via Mouse Dynamics"</h4>
+                    <p class="text-xs text-neutral-500">ACM CHI</p>
+                </a>
+                <a href="https://www.researchgate.net/profile/Frank-Schmidt-2/publication/232564809_The_Validity_and_Utility_of_Selection_Methods_in_Personnel_Psychology_Practical_and_Theoretical_Implications_of_85_Years_of_Research_Findings/links/53e2938f0cf216e8321e0625/The-Validity-and-Utility-of-Selection-Methods-in-Personnel-Psychology-Practical-and-Theoretical-Implications-of-85-Years-of-Research-Findings.pdf" target="_blank" class="hover-trigger reveal delay-200 glass-panel p-6 rounded-lg group cursor-pointer block">
+                    <div class="flex justify-between items-start mb-4"><div class="flex items-center gap-2"><i data-lucide="scale" class="text-rose-500 w-4 h-4"></i> <span class="text-[10px] text-rose-400 font-mono">VALIDITY</span></div><i data-lucide="external-link" class="text-neutral-600 w-3 h-3 group-hover:text-white transition-colors"></i></div>
+                    <h4 class="text-sm font-bold text-white mb-2 leading-snug group-hover:text-rose-400 transition-colors">"The Validity and Utility of Selection Methods (Schmidt & Hunter)"</h4>
+                    <p class="text-xs text-neutral-500">Psychological Bulletin</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW ELITE GENE-OPS SECTION (DEEP VIOLET THEME) -->
+    <section id="gene-ops" class="py-32 relative overflow-hidden bg-[#050300] border-y border-violet-900/30 z-10">
+        <div class="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-violet-600 to-transparent opacity-50"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="flex items-center gap-4 mb-12">
+                <div class="p-2 bg-violet-900/20 border border-violet-600/30 rounded"><i data-lucide="shield-alert" class="text-violet-500 w-6 h-6 animate-pulse"></i></div>
+                <div>
+                    <div class="font-mono text-xs text-violet-500 tracking-[0.3em] uppercase">Restricted Access // Tier 1</div>
+                    <div class="font-mono text-[10px] text-violet-900/60">MILITARY & INTELLIGENCE ONLY</div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-16 items-start">
+                <!-- Left: Content -->
+                <div class="lg:col-span-5 reveal">
+                    <h2 class="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tighter leading-none">
+                        GENOMIC <br/>
+                        <span class="text-stroke-violet">ENGINEERING</span>
+                    </h2>
+                    <p class="text-lg text-violet-400/70 mb-10 border-l border-violet-900/50 pl-6 font-light">
+                        Beyond training. We analyze biological substrates to predict resilience, risk tolerance, and neuroplasticity under extreme duress.
+                    </p>
+
+                    <!-- FUTURE TECH CLAIMS -->
+                    <div class="space-y-6 mb-10">
+                        <div class="flex gap-4">
+                            <div class="mt-1"><i data-lucide="zap" class="text-violet-600 w-5 h-5"></i></div>
+                            <div>
+                                <h4 class="text-white font-mono text-sm uppercase tracking-wide">Mitochondrial Overclocking</h4>
+                                <p class="text-xs text-neutral-500 leading-relaxed">Genetic modulation of ATP production efficiency for sustained high-intensity cognitive output without fatigue.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="mt-1"><i data-lucide="lightbulb" class="text-violet-600 w-5 h-5"></i></div>
+                            <div>
+                                <h4 class="text-white font-mono text-sm uppercase tracking-wide">Optogenetic Priming</h4>
+                                <p class="text-xs text-neutral-500 leading-relaxed">Developing photosensitive neural pathways for high-bandwidth direct brain-computer data transfer.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="mt-1"><i data-lucide="network" class="text-violet-600 w-5 h-5"></i></div>
+                            <div>
+                                <h4 class="text-white font-mono text-sm uppercase tracking-wide">Hyper-Myelination</h4>
+                                <p class="text-xs text-neutral-500 leading-relaxed">Gene therapy targets to increase nerve fiber insulation, physically speeding up neural reaction times.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REVISED BUTTON WITH BACKEND TRIGGER -->
+                    <button onclick="openModal('clearance')" class="hover-trigger flex items-center gap-2 px-6 py-3 bg-violet-900/10 border border-violet-600/30 text-violet-500 font-mono text-xs uppercase tracking-widest hover:bg-violet-900/30 hover:border-violet-500 transition-all">
+                        <i data-lucide="lock" class="w-3 h-3"></i> Request Clearance
+                    </button>
+                </div>
+
+                <!-- Right: Genomic Command Center -->
+                <div class="lg:col-span-7 reveal delay-200">
+                    <div class="relative rounded-xl border border-violet-900/30 bg-black/80 backdrop-blur-xl overflow-hidden">
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+                        
+                        <div class="flex justify-between items-center p-6 border-b border-violet-900/30 bg-violet-950/10">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="microscope" class="text-violet-500 w-5 h-5"></i>
+                                <span class="font-mono text-xs text-violet-500 uppercase tracking-widest">Subject 894-Alpha // Analysis</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] font-mono text-violet-700">
+                                <span class="animate-pulse">●</span> PROCESSING SEQUENCE
+                            </div>
+                        </div>
+
+                        <!-- 3D DNA Canvas Area -->
+                        <div class="relative h-64 border-b border-violet-900/30 bg-black/50">
+                             <canvas id="dna-canvas" class="w-full h-full block"></canvas>
+                             <div class="absolute bottom-4 left-6 text-[10px] font-mono text-violet-600">Locus: 11p15.5 <br/> Allele: DRD4-7R</div>
+                        </div>
+
+                        <!-- Marker Grid -->
+                        <div class="grid grid-cols-2 gap-px bg-violet-900/30">
+                            <div class="bg-black/80 p-6 hover:bg-violet-900/10 transition-colors group">
+                                <div class="flex justify-between mb-2"><span class="text-violet-500 font-bold text-sm">DRD4 (7R+)</span><span class="text-[10px] border border-violet-800 text-violet-700 px-1 rounded">High Risk</span></div>
+                                <h5 class="text-white text-xs font-mono mb-1 group-hover:text-violet-400">NOVELTY SEEKING</h5>
+                                <p class="text-[10px] text-neutral-500">Dopamine receptor variant linked to exploration and leadership in chaotic environments.</p>
+                            </div>
+                            <div class="bg-black/80 p-6 hover:bg-violet-900/10 transition-colors group">
+                                <div class="flex justify-between mb-2"><span class="text-violet-500 font-bold text-sm">EPAS1 (Tibet)</span><span class="text-[10px] border border-violet-800 text-violet-700 px-1 rounded">Rare</span></div>
+                                <h5 class="text-white text-xs font-mono mb-1 group-hover:text-violet-400">HYPOXIA TOLERANCE</h5>
+                                <p class="text-[10px] text-neutral-500">"Super Athlete" gene. Superior oxygen efficiency for high-altitude ops.</p>
+                            </div>
+                            <div class="bg-black/80 p-6 hover:bg-violet-900/10 transition-colors group">
+                                <div class="flex justify-between mb-2"><span class="text-violet-500 font-bold text-sm">5-HTTLPR (L/L)</span><span class="text-[10px] border border-violet-800 text-violet-700 px-1 rounded">Resilient</span></div>
+                                <h5 class="text-white text-xs font-mono mb-1 group-hover:text-violet-400">EMOTIONAL ARMOR</h5>
+                                <p class="text-[10px] text-neutral-500">Serotonin transporter length indicating lower susceptibility to anxiety.</p>
+                            </div>
+                            <div class="bg-black/80 p-6 hover:bg-violet-900/10 transition-colors group">
+                                <div class="flex justify-between mb-2"><span class="text-violet-500 font-bold text-sm">COMT (Val/Val)</span><span class="text-[10px] border border-violet-800 text-violet-700 px-1 rounded">Warrior</span></div>
+                                <h5 class="text-white text-xs font-mono mb-1 group-hover:text-violet-400">ACUTE STRESS</h5>
+                                <p class="text-[10px] text-neutral-500">Superior cognitive performance under immediate, high-stakes pressure.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW SECTION: PRIVACY VAULT -->
+    <section class="py-12 bg-neutral-950/80 border-t border-white/5 z-10 relative">
+        <div class="container mx-auto px-6 text-center">
+            <div class="inline-flex items-center gap-2 mb-6 text-emerald-500 border border-emerald-900/50 bg-emerald-950/20 px-3 py-1 rounded-full">
+                <i data-lucide="shield-check" class="w-4 h-4"></i> <span class="text-xs font-bold tracking-widest uppercase">Privacy First Architecture</span>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-4">Your Bio-Data is Sovereign.</h3>
+            <p class="text-neutral-400 text-sm max-w-2xl mx-auto mb-8">
+                We employ military-grade encryption and local-first processing. Your cognitive data is anonymized, tokenized, and never sold.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4 text-xs font-mono text-neutral-500">
+                <span class="flex items-center gap-2"><i data-lucide="lock" class="w-3 h-3"></i> AES-256 ENCRYPTION</span>
+                <span class="flex items-center gap-2"><i data-lucide="server" class="w-3 h-3"></i> ON-PREMISE OPTION</span>
+                <span class="flex items-center gap-2"><i data-lucide="file-check" class="w-3 h-3"></i> GDPR COMPLIANT</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- TEAM SECTION -->
+    <section id="team" class="py-20 bg-[#030305] z-10 relative border-t border-white/5">
+        <div class="container mx-auto px-6">
+            <div class="flex justify-between items-end mb-12 reveal">
+                <div>
+                    <h3 class="text-neutral-500 font-mono text-sm tracking-[0.2em] uppercase mb-4">Leadership</h3>
+                    <h2 class="text-3xl md:text-4xl font-bold text-white">Visionary Minds.</h2>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Founder -->
+                <div class="reveal p-6 glass-panel rounded-xl group hover:border-cyan-500/30 transition-colors">
+                    <div class="w-20 h-20 bg-neutral-800 rounded-full mb-6 overflow-hidden border border-white/10 group-hover:border-cyan-500/50 transition-colors">
+                        <img src="6266894401045381358.jpg" alt="Founder" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                    </div>
+                    <h4 class="text-lg font-bold text-white">Anurag Singh</h4>
+                    <span class="text-xs text-cyan-400 font-mono uppercase tracking-wider block mb-4">CEO</span>
+                    <p class="text-xs text-neutral-400 mb-6">Neuroscience and AI Researcher</p>
+                    <div class="flex gap-4">
+                        <a href="#" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+
+                <!-- Co-Founder 1 -->
+                <div class="reveal delay-100 p-6 glass-panel rounded-xl group hover:border-indigo-500/30 transition-colors">
+                    <div class="w-20 h-20 bg-neutral-800 rounded-full mb-6 overflow-hidden border border-white/10 group-hover:border-indigo-500/50 transition-colors">
+                        <img src="Agra.jpeg" alt="Co-Founder" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                    </div>
+                    <h4 class="text-lg font-bold text-white">Aditya Agrawal</h4>
+                    <span class="text-xs text-indigo-400 font-mono uppercase tracking-wider block mb-4">CTO</span>
+                    <p class="text-xs text-neutral-400 mb-6">Data Scientist & Biosignal analysis.</p>
+                    <div class="flex gap-4">
+                        <a href="#" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+
+                <!-- Co-Founder 2 -->
+                <div class="reveal delay-300 p-6 glass-panel rounded-xl group hover:border-amber-500/30 transition-colors">
+                    <div class="w-20 h-20 bg-neutral-800 rounded-full mb-6 overflow-hidden border border-white/10 group-hover:border-amber-500/50 transition-colors">
+                        <img src="ktmm.jpeg" alt="Co-Founder" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                    </div>
+                    <h4 class="text-lg font-bold text-white">Mrityunjay Tiwari</h4>
+                    <span class="text-xs text-amber-400 font-mono uppercase tracking-wider block mb-4">CTO (Neuro)</span>
+                    <p class="text-xs text-neutral-400 mb-6">Signal Processing and Neuro imaging</p>
+                    <div class="flex gap-4">
+                        <a href="#" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+
+                <!-- Co-Founder 3 -->
+                <div class="reveal delay-200 p-6 glass-panel rounded-xl group hover:border-emerald-500/30 transition-colors">
+                    <div class="w-20 h-20 bg-neutral-800 rounded-full mb-6 overflow-hidden border border-white/10 group-hover:border-emerald-500/50 transition-colors">
+                        <img src="Akshanh.jpeg" alt="Co-Founder" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                    </div>
+                    <h4 class="text-lg font-bold text-white">Akshansh Singh</h4>
+                    <span class="text-xs text-emerald-400 font-mono uppercase tracking-wider block mb-4">CSO</span>
+                    <p class="text-xs text-neutral-400 mb-6">AI Researcher (Leading scientific research)</p>
+                    <div class="flex gap-4">
+                        <a href="#" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="py-20 bg-black border-t border-white/5 text-sm z-10 relative">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-center text-xs font-mono text-neutral-600">
+                <p>&copy; 2024-2030 MINDXCOPE INC.</p>
+                <p>REDEFINING HUMAN POTENTIAL</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL (BACKEND) -->
+    <div id="lead-modal" class="fixed inset-0 z-[60] hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-[#0a0a0c] border border-white/10 rounded-xl w-full max-w-md p-8 relative shadow-2xl scale-95 opacity-0 transition-all duration-300" id="modal-content">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-neutral-500 hover:text-white cursor-none hover-trigger"><i data-lucide="x"></i></button>
+            
+            <!-- SECURITY SCANNING OVERLAY (Hidden by default) -->
+            <div id="modal-security-scan" class="hidden text-center py-8">
+                <div class="w-16 h-16 border-2 border-violet-500 rounded-full mx-auto mb-4 flex items-center justify-center animate-pulse">
+                    <i data-lucide="scan" class="w-8 h-8 text-violet-400"></i>
+                </div>
+                <h3 class="text-violet-400 font-bold animate-pulse" id="scan-text">INITIATING SECURE PROTOCOL...</h3>
+                <div class="security-line mt-4 w-1/2 mx-auto"></div>
+            </div>
+
+            <!-- FORM VIEW -->
+            <div id="modal-form-view">
+                <div class="mb-6">
+                    <span id="modal-context" class="text-[10px] font-mono text-cyan-500 uppercase tracking-widest border border-cyan-500/30 px-2 py-1 rounded">DEMO REQUEST</span>
+                    <h3 class="text-2xl font-bold text-white mt-3" id="modal-title">Unlock Intelligence.</h3>
+                    <p class="text-neutral-400 text-sm mt-2" id="modal-desc">Enter your corporate email to access the Mindxcope platform.</p>
+                </div>
+                <form onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <!-- Standard Fields -->
+                    <div><label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Work Email</label><input type="email" name="user_email" required class="w-full bg-black/50 border border-white/10 rounded p-3 text-white text-sm focus:border-cyan-500 focus:outline-none transition-colors cursor-none" placeholder="name@company.com"></div>
+                    
+                    <!-- Dynamic Second Field -->
+                    <div id="field-company"><label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Company Name</label><input type="text" name="company_name" class="w-full bg-black/50 border border-white/10 rounded p-3 text-white text-sm focus:border-cyan-500 focus:outline-none transition-colors cursor-none" placeholder="Acme Corp"></div>
+                    
+                    <!-- Hidden Clearance Fields (Only shown for Clearance) -->
+                    <div id="field-clearance" class="hidden">
+                        <label class="block text-xs font-bold text-violet-500 mb-1 uppercase">Agency / Dept ID</label>
+                        <input type="text" name="agency_id" class="w-full bg-black/50 border border-violet-500/50 rounded p-3 text-white text-sm focus:border-violet-500 focus:outline-none transition-colors cursor-none" placeholder="ID-XXXX-88">
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="hover-trigger w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded transition-all flex items-center justify-center gap-2"><span id="btn-text">Submit Request</span><i id="btn-icon" data-lucide="arrow-right" class="w-4 h-4"></i><div id="btn-spinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div></button>
+                </form>
+            </div>
+
+            <!-- SUCCESS VIEW -->
+            <div id="modal-success-view" class="hidden text-center py-8">
+                <div class="w-16 h-16 bg-emerald-900/20 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-4"><i data-lucide="check" class="w-8 h-8"></i></div>
+                <h3 class="text-xl font-bold text-white mb-2" id="success-title">Request Received.</h3>
+                <p class="text-neutral-400 text-sm mb-6">Our intelligence team will contact you shortly.</p>
+                <button onclick="closeModal()" class="text-neutral-500 hover:text-white text-xs font-bold uppercase tracking-wider hover-trigger">Close Window</button>
+            </div>
+        </div>
     </div>
-    <div class="tab-content" id="tab-content"></div>
-  </div>
 
-</div>
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        lucide.createIcons();
 
-<!-- ░░░░ TOAST ░░░░ -->
-<div id="toast" class="toast" aria-live="polite"></div>
+        // 1. INITIALIZE EMAILJS
+        (function() {
+            // Replace with your actual public key from EmailJS dashboard
+            emailjs.init("YOUR_PUBLIC_KEY"); 
+        })();
 
-<script src="app.js"></script>
+        // 2. PRELOADER LOGIC
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            const progress = document.getElementById('loader-progress');
+            const text = document.getElementById('loader-text');
+            
+            // Simulate loading sequence
+            setTimeout(() => { progress.style.width = "40%"; }, 100);
+            setTimeout(() => { progress.style.width = "70%"; text.innerText = "CALIBRATING NEURAL NET..."; }, 800);
+            setTimeout(() => { progress.style.width = "100%"; text.innerText = "ACCESS GRANTED"; }, 1600);
+            setTimeout(() => { 
+                preloader.style.opacity = "0";
+                setTimeout(() => { preloader.style.display = "none"; }, 800);
+            }, 2200);
+        });
+
+        // 3. CUSTOM CURSOR LOGIC
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursor-dot');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            cursorDot.style.left = e.clientX + 'px';
+            cursorDot.style.top = e.clientY + 'px';
+        });
+
+        const hoverTargets = document.querySelectorAll('a, button, .hover-trigger, .spotlight-card');
+        hoverTargets.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+        // 4. MODAL & EMAIL LOGIC (UPDATED FOR CLEARANCE)
+        function openModal(context) {
+            const modal = document.getElementById('lead-modal');
+            const content = document.getElementById('modal-content');
+            const tag = document.getElementById('modal-context');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const formView = document.getElementById('modal-form-view');
+            const scanView = document.getElementById('modal-security-scan');
+            const btn = document.getElementById('submit-btn');
+            
+            // Reset Views
+            formView.classList.add('hidden'); // Start hidden
+            scanView.classList.add('hidden');
+            document.getElementById('modal-success-view').classList.add('hidden');
+            
+            // Reset Inputs
+            document.getElementById('field-company').classList.remove('hidden');
+            document.getElementById('field-clearance').classList.add('hidden');
+            btn.className = "hover-trigger w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded transition-all flex items-center justify-center gap-2";
+
+            if(context === 'clearance') {
+                // SECURITY SIMULATION FLOW
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+
+                scanView.classList.remove('hidden');
+                const scanText = document.getElementById('scan-text');
+                
+                setTimeout(() => { scanText.innerText = "VERIFYING ENCRYPTION..."; }, 800);
+                setTimeout(() => { scanText.innerText = "HANDSHAKE ESTABLISHED."; }, 1600);
+                
+                setTimeout(() => {
+                    scanView.classList.add('hidden');
+                    formView.classList.remove('hidden');
+                    
+                    // Specific Clearance UI
+                    tag.innerText = "TIER-1 SECURITY"; 
+                    tag.className = "text-[10px] font-mono text-violet-500 uppercase tracking-widest border border-violet-500/30 px-2 py-1 rounded";
+                    title.innerText = "Restricted Access.";
+                    desc.innerText = "Enter credentials for classified gene-ops briefing.";
+                    
+                    document.getElementById('field-company').classList.add('hidden');
+                    document.getElementById('field-clearance').classList.remove('hidden');
+                    
+                    btn.className = "hover-trigger w-full bg-violet-900 border border-violet-500 text-white font-bold py-3 rounded transition-all flex items-center justify-center gap-2 hover:bg-violet-800";
+                }, 2200);
+
+            } else {
+                // STANDARD FLOW
+                formView.classList.remove('hidden');
+                if(context === 'demo') { 
+                    tag.innerText = "DEMO REQUEST"; 
+                    tag.className = "text-[10px] font-mono text-cyan-500 uppercase tracking-widest border border-cyan-500/30 px-2 py-1 rounded";
+                    title.innerText = "Book a Hiring Demo"; 
+                    desc.innerText = "Enter your corporate email to access the Mindxcope platform.";
+                }
+                else if(context === 'screening') { 
+                    tag.innerText = "SCREENING ACCESS"; 
+                    tag.className = "text-[10px] font-mono text-cyan-500 uppercase tracking-widest border border-cyan-500/30 px-2 py-1 rounded";
+                    title.innerText = "Start Candidate Assessment"; 
+                    desc.innerText = "Begin a free trial assessment.";
+                }
+                else if(context === 'case-studies') { 
+                    tag.innerText = "RESEARCH ACCESS"; 
+                    tag.className = "text-[10px] font-mono text-cyan-500 uppercase tracking-widest border border-cyan-500/30 px-2 py-1 rounded";
+                    title.innerText = "Download Case Studies"; 
+                    desc.innerText = "We will send the PDF to your inbox.";
+                }
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('lead-modal');
+            const content = document.getElementById('modal-content');
+            
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const btnText = document.getElementById('btn-text');
+            const btnIcon = document.getElementById('btn-icon');
+            const spinner = document.getElementById('btn-spinner');
+            const successTitle = document.getElementById('success-title');
+            
+            // Check context for success message
+            const isClearance = document.getElementById('modal-context').innerText.includes('SECURITY');
+
+            // Show Loading State
+            btnText.innerText = isClearance ? "Transmitting..." : "Sending...";
+            btnIcon.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            
+            // SEND EMAIL VIA EMAILJS
+            // Replace with your Service ID and Template ID
+            emailjs.sendForm('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', e.target)
+                .then(function() {
+                    document.getElementById('modal-form-view').classList.add('hidden');
+                    document.getElementById('modal-success-view').classList.remove('hidden');
+                    if(isClearance) successTitle.innerText = "Encrypted Packet Sent.";
+                    else successTitle.innerText = "Request Received.";
+                }, function(error) {
+                    console.log('FAILED...', error);
+                    // Fallback for demo purposes if keys aren't set
+                    document.getElementById('modal-form-view').classList.add('hidden');
+                    document.getElementById('modal-success-view').classList.remove('hidden');
+                     if(isClearance) successTitle.innerText = "Encrypted Packet Sent.";
+                })
+                .finally(() => {
+                    btnText.innerText = "Submit Request";
+                    btnIcon.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                });
+        }
+
+        // --- Neural Cortex (Background) ---
+        function initNeuralCortex() {
+            const canvas = document.getElementById('neural-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            
+            const resize = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            };
+
+            const initParticles = () => {
+                particles = [];
+                const count = Math.min(window.innerWidth / 15, 100);
+                for (let i = 0; i < count; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2,
+                        color: Math.random() > 0.5 ? '#06b6d4' : '#6366f1'
+                    });
+                }
+            };
+
+            const draw = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((p, i) => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                    
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p2 = particles[j];
+                        const dist = Math.sqrt((p.x - p2.x)**2 + (p.y - p2.y)**2);
+                        if (dist < 100) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - dist/1000})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                });
+                requestAnimationFrame(draw);
+            };
+
+            window.addEventListener('resize', resize);
+            resize();
+            draw();
+        }
+
+        // --- DNA Simulation ---
+        function initDNASimulation() {
+            const canvas = document.getElementById('dna-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let frame = 0;
+
+            const resize = () => {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            };
+
+            const draw = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                const particles = 15;
+                const separation = 20;
+
+                for (let i = 0; i < particles; i++) {
+                    const y = (i - particles/2) * separation + cy;
+                    const phase = i * 0.5 + frame * 0.02;
+                    
+                    const x1 = cx + Math.sin(phase) * 30;
+                    const x2 = cx + Math.sin(phase + Math.PI) * 30;
+                    
+                    // DEEP VIOLET COLOR SCHEME
+                    ctx.beginPath(); ctx.strokeStyle = `rgba(139, 92, 246, 0.2)`; ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(x1, y, 3, 0, Math.PI*2); ctx.fillStyle = 'rgba(139, 92, 246, 0.8)'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(x2, y, 3, 0, Math.PI*2); ctx.fillStyle = 'rgba(139, 92, 246, 0.8)'; ctx.fill();
+                }
+                frame++;
+                requestAnimationFrame(draw);
+            };
+
+            setTimeout(() => { resize(); draw(); }, 100);
+            window.addEventListener('resize', resize);
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initNeuralCortex();
+            if(document.getElementById('dna-canvas')) initDNASimulation();
+
+            // Text Scramble
+            const el = document.querySelector('.scramble-text');
+            if(el) {
+                const text = el.dataset.text;
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                let iteration = 0;
+                const interval = setInterval(() => {
+                    el.innerText = text.split('').map((l, i) => {
+                        if(i < iteration) return text[i];
+                        return chars[Math.floor(Math.random() * chars.length)];
+                    }).join('');
+                    if(iteration >= text.length) clearInterval(interval);
+                    iteration += 1/3;
+                }, 30);
+            }
+
+            // Visualizer Bars
+            const viz = document.getElementById('visualizer-bars');
+            if (viz) {
+                for(let i=0; i<20; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'flex-1 bg-cyan-500/50 animate-pulse';
+                    bar.style.height = Math.random() * 100 + '%';
+                    bar.style.animationDelay = (i*0.05) + 's';
+                    bar.style.animationDuration = '0.8s';
+                    viz.appendChild(bar);
+                }
+            }
+
+            // Reveal on Scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('active');
+                });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+            
+            // Scroll Progress
+            window.addEventListener('scroll', () => {
+                const scrolled = window.scrollY;
+                const max = document.body.scrollHeight - window.innerHeight;
+                document.getElementById('scroll-progress').style.width = (scrolled/max)*100 + '%';
+            });
+        });
+    </script>
 </body>
 </html>

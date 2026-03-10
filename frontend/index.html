@@ -3,101 +3,283 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Resume Analyzer</title>
+  <title>TalentIQ — AI Resume Intelligence Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <div class="logo"><span>⚡</span> ResumeAI</div>
-    <div class="header-right">
-      <span class="free-badge">✓ 100% Free</span>
-      <span class="powered">Powered by Llama 3.1 + LangChain</span>
-    </div>
-  </header>
 
-  <!-- UPLOAD -->
-  <section id="s-upload">
-    <div class="hero">
-      <h1>AI-Powered <span>Resume Analysis</span></h1>
-      <p>Upload any PDF resume. Get instant candidate scoring, full profile breakdown, and 25 custom interview questions — completely free.</p>
+<!-- BACKGROUND GRID -->
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M11 2L20 7V15L11 20L2 15V7L11 2Z" stroke="url(#lg1)" stroke-width="1.5" fill="none"/>
+          <path d="M11 6L16 9V13L11 16L6 13V9L11 6Z" fill="url(#lg2)" opacity="0.8"/>
+          <defs>
+            <linearGradient id="lg1" x1="2" y1="2" x2="20" y2="20">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="6" y1="6" x2="16" y2="16">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="logo-text">Talent<span>IQ</span></span>
     </div>
-    <div class="upload-box" id="upload-box">
-      <div class="u-icon">📄</div>
-      <h3>Drag & Drop Resume Here</h3>
-      <p>or <label for="file-input" class="browse">click to browse</label></p>
-      <small>PDF only · Max 10MB</small>
+    <nav class="nav-pills">
+      <span class="nav-tag">AI-Powered</span>
+      <span class="nav-tag">ATS Analysis</span>
+      <span class="nav-tag free">Free Forever</span>
+    </nav>
+    <div class="header-right">
+      <span class="model-badge">
+        <span class="pulse-dot"></span>
+        Llama 3.3 · 70B
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- UPLOAD SECTION -->
+<section id="s-upload" class="section-upload">
+  <div class="upload-container">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-dot"></span>
+        Industry-Grade Resume Intelligence
+      </div>
+      <h1>Decode Every Resume<br><span class="gradient-text">Like a Hiring Expert</span></h1>
+      <p class="hero-sub">Deep ATS analysis, candidate scoring, skill mapping, and 25 targeted interview questions — powered by state-of-the-art AI. Trusted by recruiters at top companies.</p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-n">10+</span><span class="stat-l">Data Points</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-n">25</span><span class="stat-l">Interview Qs</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-n">&lt;30s</span><span class="stat-l">Analysis Time</span></div>
+      </div>
+    </div>
+
+    <div class="upload-card" id="upload-box">
+      <div class="upload-card-inner">
+        <div class="upload-icon-wrap">
+          <div class="upload-icon-ring"></div>
+          <svg class="upload-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <path d="M16 4L26 10V22L16 28L6 22V10L16 4Z" stroke="url(#ugrad)" stroke-width="1.5" fill="none"/>
+            <path d="M16 12V20M12 16L16 12L20 16" stroke="url(#ugrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="ugrad" x1="6" y1="4" x2="26" y2="28">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h3>Drop Resume Here</h3>
+        <p>or <label for="file-input" class="browse-link">browse files</label></p>
+        <div class="upload-meta">
+          <span>PDF format</span>
+          <span class="dot-sep">·</span>
+          <span>Max 10MB</span>
+          <span class="dot-sep">·</span>
+          <span>Secure & Private</span>
+        </div>
+      </div>
       <input type="file" id="file-input" accept=".pdf" hidden>
     </div>
-    <div id="file-ready" class="hidden file-ready">
-      <span id="fname"></span>
-      <button id="go-btn" onclick="startAnalysis()">Analyze Resume →</button>
-    </div>
-  </section>
 
-  <!-- LOADING -->
-  <section id="s-loading" class="hidden">
-    <div class="loader-wrap">
-      <div class="ring"></div>
-      <h3>Analyzing resume with AI...</h3>
-      <p>This takes about 20–40 seconds</p>
-      <div class="steps-list">
-        <div class="sl" id="sl1">📄 Extracting text from PDF</div>
-        <div class="sl" id="sl2">🔢 Building vector embeddings</div>
-        <div class="sl" id="sl3">🧠 Llama 3.1 analyzing profile...</div>
-        <div class="sl" id="sl4">💬 Generating interview questions...</div>
+    <div id="file-ready" class="file-ready hidden">
+      <div class="file-chip">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="9" height="14" rx="1.5" stroke="#6366f1" stroke-width="1.2"/><path d="M5 5h5M5 8h5M5 11h3" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span id="fname"></span>
       </div>
-    </div>
-  </section>
-
-  <!-- RESULTS -->
-  <section id="s-results" class="hidden">
-    <div class="res-top">
-      <button onclick="resetApp()" class="back-btn">← Analyze Another</button>
-      <div id="rec-pill"></div>
+      <button id="go-btn" onclick="startAnalysis()">
+        <span>Analyze Resume</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
 
-    <div class="profile-card">
-      <div class="profile-left">
-        <div class="avatar" id="av"></div>
-        <div class="profile-info">
-          <h2 id="cname"></h2>
-          <div id="crole"></div>
-          <div id="ccontact"></div>
-        </div>
+    <div class="trust-bar">
+      <span>Powered by</span>
+      <span class="trust-item">Groq Inference</span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item">LangChain</span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item">FastAPI</span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item">End-to-End Encrypted</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOADING SECTION -->
+<section id="s-loading" class="section-loading hidden">
+  <div class="loading-container">
+    <div class="loading-visual">
+      <div class="loading-rings">
+        <div class="lr lr1"></div>
+        <div class="lr lr2"></div>
+        <div class="lr lr3"></div>
       </div>
-      <div class="score-wrap">
-        <svg viewBox="0 0 120 120" width="120" height="120">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#1e3a5f" stroke-width="10"/>
-          <circle id="score-ring" cx="60" cy="60" r="50" fill="none"
-            stroke="url(#sg)" stroke-width="10" stroke-linecap="round"
-            style="transition:stroke-dashoffset 1.6s ease;transform:rotate(-90deg);transform-origin:center"/>
-          <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#3b82f6"/>
-            <stop offset="100%" stop-color="#f97316"/>
-          </linearGradient></defs>
+      <div class="loading-center-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L21 8V16L12 21L3 16V8L12 3Z" stroke="url(#lgrad)" stroke-width="1.5" fill="none"/>
+          <path d="M12 8L16 10.5V14.5L12 17L8 14.5V10.5L12 8Z" fill="url(#lgrad2)"/>
+          <defs>
+            <linearGradient id="lgrad" x1="3" y1="3" x2="21" y2="21"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
+            <linearGradient id="lgrad2" x1="8" y1="8" x2="16" y2="17"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
+          </defs>
         </svg>
-        <div class="score-inner">
-          <span id="score-n">0</span>
-          <small>/100</small>
+      </div>
+    </div>
+    <h2 class="loading-title">Analyzing Resume</h2>
+    <p class="loading-sub">Our AI is performing deep intelligence extraction</p>
+    <div class="loading-steps">
+      <div class="lstep" id="ls1">
+        <div class="lstep-icon">📄</div>
+        <div class="lstep-info">
+          <div class="lstep-title">Parsing PDF Structure</div>
+          <div class="lstep-desc">Extracting text, layout, and metadata</div>
         </div>
+        <div class="lstep-status"></div>
+      </div>
+      <div class="lstep" id="ls2">
+        <div class="lstep-icon">🔍</div>
+        <div class="lstep-info">
+          <div class="lstep-title">ATS Compatibility Scan</div>
+          <div class="lstep-desc">Checking format, keywords, and structure</div>
+        </div>
+        <div class="lstep-status"></div>
+      </div>
+      <div class="lstep" id="ls3">
+        <div class="lstep-icon">🧠</div>
+        <div class="lstep-info">
+          <div class="lstep-title">AI Deep Analysis</div>
+          <div class="lstep-desc">Llama 3.3 70B evaluating candidate profile</div>
+        </div>
+        <div class="lstep-status"></div>
+      </div>
+      <div class="lstep" id="ls4">
+        <div class="lstep-icon">💬</div>
+        <div class="lstep-info">
+          <div class="lstep-title">Generating Interview Pack</div>
+          <div class="lstep-desc">Creating 25 targeted questions across 5 categories</div>
+        </div>
+        <div class="lstep-status"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS SECTION -->
+<section id="s-results" class="section-results hidden">
+  <div class="results-header">
+    <button class="back-btn" onclick="resetApp()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      New Analysis
+    </button>
+    <div class="results-title-wrap">
+      <h2 class="results-title">Candidate Intelligence Report</h2>
+      <span class="results-timestamp" id="report-time"></span>
+    </div>
+    <div id="rec-badge"></div>
+  </div>
+
+  <!-- TOP CARDS ROW -->
+  <div class="top-cards">
+    <!-- Profile Card -->
+    <div class="profile-card card">
+      <div class="profile-avatar" id="pav"></div>
+      <div class="profile-details">
+        <h2 id="pname">—</h2>
+        <div class="profile-role" id="prole">—</div>
+        <div class="profile-tags" id="ptags"></div>
+        <div class="profile-contact" id="pcontact"></div>
       </div>
     </div>
 
-    <p class="summary" id="csummary"></p>
-
-    <div class="tab-bar">
-      <button class="tab on" data-t="skills">Skills</button>
-      <button class="tab" data-t="experience">Experience</button>
-      <button class="tab" data-t="strengths">Strengths & Gaps</button>
-      <button class="tab" data-t="tech-q">Technical Qs</button>
-      <button class="tab" data-t="behavioral-q">Behavioral Qs</button>
-      <button class="tab" data-t="situational-q">Situational Qs</button>
-      <button class="tab" data-t="redflags">🚩 Red Flags</button>
+    <!-- Score Card -->
+    <div class="score-card card">
+      <div class="score-label">Overall Score</div>
+      <div class="score-ring-wrap">
+        <svg class="score-svg" viewBox="0 0 140 140" width="140" height="140">
+          <circle cx="70" cy="70" r="58" fill="none" stroke="#1e1e32" stroke-width="10"/>
+          <circle id="score-arc" cx="70" cy="70" r="58" fill="none"
+            stroke="url(#scoreGrad)" stroke-width="10" stroke-linecap="round"
+            style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)"/>
+          <defs>
+            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="score-center">
+          <span class="score-num" id="score-num">0</span>
+          <span class="score-denom">/100</span>
+        </div>
+      </div>
+      <div class="score-grade" id="score-grade">—</div>
     </div>
-    <div id="tab-body"></div>
-  </section>
 
-  <script src="app.js"></script>
+    <!-- ATS Breakdown Card -->
+    <div class="ats-card card">
+      <div class="card-title">ATS Breakdown</div>
+      <div class="ats-bars" id="ats-bars">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar card" id="psummary"></div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="skills">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5 7l1.5 1.5L9.5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Skills
+    </button>
+    <button class="tab-btn" data-tab="experience">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 3V2a1 1 0 011-1h4a1 1 0 011 1v1M1 7h12" stroke="currentColor" stroke-width="1.2"/></svg>
+      Experience
+    </button>
+    <button class="tab-btn" data-tab="strengths">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.8 3.6L13 5.4l-3 2.9.7 4.1L7 10.4l-3.7 2 .7-4.1L1 5.4l4.2-.8L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Strengths & Gaps
+    </button>
+    <button class="tab-btn" data-tab="technical">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4L1 7l3 3M10 4l3 3-3 3M8 2l-2 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Technical Qs
+    </button>
+    <button class="tab-btn" data-tab="behavioral">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 12c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Behavioral Qs
+    </button>
+    <button class="tab-btn" data-tab="situational">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.4 1.4M9.6 9.6L11 11M3 11l1.4-1.4M9.6 4.4L11 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Situational Qs
+    </button>
+    <button class="tab-btn danger" data-tab="redflags">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 12h10L7 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10v.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Red Flags
+    </button>
+  </div>
+
+  <!-- TAB BODY -->
+  <div class="tab-body" id="tab-body"></div>
+
+</section>
+
+<script src="app.js"></script>
 </body>
 </html>

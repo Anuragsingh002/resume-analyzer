@@ -1,938 +1,775 @@
-/* ════════════════════════════════
-   TalentIQ v2.0 — Application JS
-   ════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   TALENTIQ v5.0 — app.js
+   Application logic, tab renderers, helpers
+═══════════════════════════════════════════ */
 
-const API = 'https://resume-analyzer-6wj1.onrender.com';
-const $ = id => document.getElementById(id);
+'use strict';
 
-let resumeFile = null, reportData = null;
+// ── State ────────────────────────────────────
+let currentTab  = 'overview';
+let resumeFile  = null;
 
-/* ──────────────────────────────────────
-   SCREEN MANAGEMENT
-────────────────────────────────────── */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  $(id).classList.add('active');
+const CANDIDATE = {
+  name:      'Priya Sharma',
+  role:      'Senior ML Engineer',
+  score:     84,
+  hire:      'strong-yes',
+  hireLabel: 'Strong Hire',
+};
+
+
+// ── Theme ────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
 }
 
-/* ──────────────────────────────────────
-   UPLOAD — FILE HANDLING
-────────────────────────────────────── */
-const dropZone = $('drop-zone');
-const fileInput = $('file-input');
 
-dropZone.addEventListener('click', e => {
-  if (e.target !== document.querySelector('.dz-browse')) fileInput.click();
+// ── File handling ────────────────────────────
+document.getElementById('resume-file').addEventListener('change', function () {
+  if (this.files[0]) setFile(this.files[0]);
 });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('over');
+
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', ()  => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop',      e  => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
   const f = e.dataTransfer.files[0];
-  if (f?.type === 'application/pdf') setFile(f);
-  else toast('Only PDF files are accepted.', 'error');
+  if (f) setFile(f);
 });
-fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 
 function setFile(f) {
   resumeFile = f;
-  $('dz-content').classList.add('hidden');
-  $('file-name').textContent = f.name;
-  $('file-info').classList.remove('hidden');
-  $('analyze-btn').disabled = false;
-  $('analyze-btn-text').textContent = 'Run full intelligence analysis';
+  document.getElementById('file-name').textContent = f.name;
+  document.getElementById('file-preview').classList.add('show');
 }
 
-function removeFile() {
+function clearFile() {
   resumeFile = null;
-  fileInput.value = '';
-  $('file-info').classList.add('hidden');
-  $('dz-content').classList.remove('hidden');
-  $('analyze-btn').disabled = true;
-  $('analyze-btn-text').textContent = 'Select a resume to begin';
+  document.getElementById('resume-file').value = '';
+  document.getElementById('file-preview').classList.remove('show');
+}
+
+
+// ── Analysis flow ────────────────────────────
+function startAnalysis() {
+  const jd = document.getElementById('jd-input').value.trim();
+  if (!resumeFile && !jd) {
+    showToast('Please upload a resume or paste a job description', 'error');
+    return;
+  }
+
+  showScreen('loading');
+
+  runLoadingSequence(() => {
+    document.getElementById('results-timestamp').textContent =
+      'Generated ' + new Date().toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    document.getElementById('sb-name').textContent = CANDIDATE.name;
+    showScreen('results');
+    switchTab('overview');
+  });
+}
+
+function runLoadingSequence(cb) {
+  const stages = document.querySelectorAll('#loading-stages .stage');
+  let i = 0;
+  stages.forEach(s => s.classList.remove('active', 'done'));
+
+  function next() {
+    if (i > 0) {
+      stages[i - 1].classList.remove('active');
+      stages[i - 1].classList.add('done');
+    }
+    if (i >= stages.length) { setTimeout(cb, 400); return; }
+    stages[i].classList.add('active');
+    i++;
+    setTimeout(next, 700 + Math.random() * 400);
+  }
+  next();
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
 }
 
 function resetApp() {
-  removeFile();
-  reportData = null;
-  $('jd-input').value = '';
-  showScreen('screen-upload');
+  clearFile();
+  document.getElementById('jd-input').value   = '';
+  document.getElementById('role-input').value = '';
+  showScreen('upload');
 }
 
-/* ──────────────────────────────────────
-   ANALYSIS
-────────────────────────────────────── */
-async function startAnalysis() {
-  if (!resumeFile) return;
-  showScreen('screen-loading');
 
-  // Step animation
-  const steps = ['ls1','ls2','ls3','ls4','ls5','ls6'];
-  steps.forEach(id => $(id).classList.remove('active','done'));
-  let cur = 0;
-  const advance = () => {
-    if (cur > 0) { $(steps[cur-1]).classList.remove('active'); $(steps[cur-1]).classList.add('done'); }
-    if (cur < steps.length) { $(steps[cur]).classList.add('active'); cur++; }
-  };
-  advance();
-  const timers = [4500,10000,17000,24000,31000].map((t,i) => setTimeout(advance, t));
+// ── Tab navigation ───────────────────────────
+document.getElementById('sb-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.nav-btn[data-tab]');
+  if (btn) switchTab(btn.dataset.tab);
+});
 
-  const fd = new FormData();
-  fd.append('file', resumeFile);
-  const jd = $('jd-input').value.trim();
-  if (jd) fd.append('job_description', jd);
-
-  try {
-    const res = await fetch(`${API}/analyze`, { method: 'POST', body: fd });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Analysis failed'); }
-    reportData = await res.json();
-    timers.forEach(clearTimeout);
-    steps.forEach(id => { $(id).classList.remove('active'); $(id).classList.add('done'); });
-    await delay(600);
-    buildResultsShell(reportData);
-    showScreen('screen-results');
-  } catch (e) {
-    timers.forEach(clearTimeout);
-    showScreen('screen-upload');
-    toast(e.message, 'error');
-  }
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#sb-nav .nav-btn').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector(`#sb-nav .nav-btn[data-tab="${tab}"]`);
+  if (active) active.classList.add('active');
+  renderTab(tab);
+  document.querySelector('.results-main').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ──────────────────────────────────────
-   RESULTS — SHELL
-────────────────────────────────────── */
-function buildResultsShell(d) {
-  const a = d.analysis || {};
 
-  // Sidebar candidate
-  const initials = (a.candidate_name || 'CA').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
-  $('candidate-avatar').textContent = initials;
-  $('sidebar-candidate').querySelector('.candidate-meta .candidate-name').textContent
-    = a.candidate_name || '—';
-  $('sidebar-candidate').querySelector('.candidate-meta .candidate-role').textContent
-    = a.current_role || '—';
-
-  // Sidebar scores
-  $('s-overall').textContent = (a.overall_score ?? '—') + (a.overall_score != null ? '' : '');
-  $('s-jd').textContent = a.jd_match_score != null ? a.jd_match_score : 'N/A';
-  $('s-yrs').textContent = a.years_of_experience ?? '—';
-
-  // Topbar
-  $('results-meta').textContent = `Generated ${new Date().toLocaleString()} · TalentIQ v2.0`;
-
-  // Hire badge
-  const rec = a.hire_recommendation || '';
-  const hb = $('hire-badge');
-  hb.textContent = rec;
-  hb.className = 'hire-badge ' + (
-    rec.includes('Strongly') ? 'hb-strong'
-    : rec.includes('Caution') ? 'hb-caut'
-    : rec.includes('Not') ? 'hb-no'
-    : 'hb-rec'
-  );
-
-  // Tab nav
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderTab(btn.dataset.tab);
-    });
-  });
-
-  renderTab('overview');
-}
-
-/* ──────────────────────────────────────
-   TAB ROUTER
-────────────────────────────────────── */
+// ── Tab renderer ─────────────────────────────
 function renderTab(tab) {
-  const a = reportData?.analysis || {};
-  const q = reportData?.interview_questions || {};
-  const bias = reportData?.bias_report || {};
-  const coaching = reportData?.candidate_feedback || {};
-  const body = $('tab-content');
+  const el = document.getElementById('tab-content');
+  el.innerHTML = '';
+  el.classList.remove('anim-up');
+  void el.offsetWidth;  // reflow to restart animation
+  el.classList.add('anim-up');
 
   const renderers = {
-    overview:    () => renderOverview(a),
-    ats:         () => renderATS(a),
-    skills:      () => renderSkills(a),
-    experience:  () => renderExperience(a),
-    analysis:    () => renderAnalysis(a),
-    jdmatch:     () => renderJDMatch(a),
-    technical:   () => renderQuestions(q.technical_questions  || [], 'Technical'),
-    behavioral:  () => renderQuestions(q.behavioral_questions || [], 'Behavioural'),
-    situational: () => renderQuestions(q.situational_questions|| [], 'Situational'),
-    deepdive:    () => renderDeepDive(q),
-    redflags:    () => renderRedFlags(q.red_flag_probes || [], a.red_flags || []),
-    bias:        () => renderBias(bias),
-    coaching:    () => renderCoaching(coaching, a),
-    outreach:    () => renderOutreach(a),
+    overview, skills, experience, analysis, impact,
+    realvsbuzz, jdmatch, redflags, technical, behavioral,
+    situational, deepdive, bias, coaching, outreach,
+    pipeline, jobgen, decision,
   };
 
-  body.innerHTML = (renderers[tab] || (() => '<p class="body-text">Coming soon.</p>'))();
-  body.querySelectorAll('.bar-fill').forEach(el => {
-    const w = el.dataset.w || '0%';
-    el.style.width = '0%';
-    requestAnimationFrame(() => setTimeout(() => el.style.width = w, 50));
+  el.innerHTML = renderers[tab]
+    ? renderers[tab]()
+    : `<p style="color:var(--text-2)">Content for <strong>${tab}</strong> coming soon.</p>`;
+
+  // Animate score rings and progress bars
+  setTimeout(() => {
+    el.querySelectorAll('.score-ring-fill').forEach(fill => {
+      const pct = parseFloat(fill.dataset.pct) || 0;
+      fill.style.strokeDashoffset = 340 - (340 * pct / 100);
+    });
+    el.querySelectorAll('[data-w]').forEach(bar => {
+      bar.style.width = bar.dataset.w + '%';
+    });
+  }, 60);
+
+  // Q&A accordion
+  el.querySelectorAll('.qa-q').forEach(q => {
+    q.addEventListener('click', () => q.closest('.qa-item').classList.toggle('open'));
   });
 }
 
-/* ──────────────────────────────────────
-   OVERVIEW
-────────────────────────────────────── */
-function renderOverview(a) {
-  const c = a.contact || {};
-  const initials = (a.candidate_name||'CA').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  const links = [
-    c.email    && `<a class="link-row" href="mailto:${c.email}">${icon('mail')} ${c.email}</a>`,
-    c.linkedin && `<a class="link-row" href="${c.linkedin}" target="_blank">${icon('linkedin')} LinkedIn</a>`,
-    c.github   && `<a class="link-row" href="${c.github}" target="_blank">${icon('github')} GitHub</a>`,
-    c.portfolio && `<a class="link-row" href="${c.portfolio}" target="_blank">${icon('globe')} Portfolio</a>`,
-    c.location && `<span class="link-row">${icon('pin')} ${c.location}</span>`,
-  ].filter(Boolean);
 
-  const kpis = [
-    { val: a.overall_score ?? '—', lbl: 'Overall Score' },
-    { val: a.jd_match_score != null ? a.jd_match_score+'%' : 'N/A', lbl: 'JD Match' },
-    { val: a.years_of_experience ?? '—', lbl: 'Years Exp.' },
-    { val: a.experience_level || '—', lbl: 'Level' },
-  ];
+/* ══════════════════════════════════════════
+   TAB CONTENT RENDERERS
+══════════════════════════════════════════ */
 
-  const tags = [
-    a.experience_level && tag(a.experience_level, 'accent'),
-    a.years_of_experience != null && tag(a.years_of_experience + ' yrs', ''),
-  ].filter(Boolean);
-
+function overview() {
   return `
-  <div class="section-block">
-    <div class="overview-profile">
-      <div class="ov-avatar">${initials}</div>
-      <div style="flex:1">
-        <div class="ov-name">${a.candidate_name || 'Unknown Candidate'}</div>
-        <div class="ov-role">${[a.current_role, a.current_company && `at ${a.current_company}`].filter(Boolean).join(' ')}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${tags.join('')}</div>
-        <div class="ov-links">${links.join('')}</div>
-      </div>
-    </div>
-    <div class="kv-row">
-      ${kpis.map(k => `<div class="kv-cell"><div class="kv-val">${k.val}</div><div class="kv-lbl">${k.lbl}</div></div>`).join('')}
-    </div>
-  </div>
+    <div class="section-h">Intelligence Dashboard</div>
+    <div class="section-sub">Overall candidate fitness across all evaluation dimensions</div>
 
-  ${a.professional_summary ? `
-  <div class="section-block">
-    <h3 class="section-heading">Summary</h3>
-    <div class="callout">${a.professional_summary}</div>
-  </div>` : ''}
-
-  ${a.unique_value_proposition ? `
-  <div class="section-block">
-    <h3 class="section-heading">Unique Value Proposition</h3>
-    <p class="body-text">${a.unique_value_proposition}</p>
-  </div>` : ''}
-
-  <div class="ov-two-col">
-    ${a.career_trajectory ? `<div>
-      <h3 class="section-heading">Career Trajectory</h3>
-      <p class="body-text" style="font-style:italic">${a.career_trajectory}</p>
-    </div>` : ''}
-    ${(a.ideal_role_fit||[]).length ? `<div>
-      <h3 class="section-heading">Best Role Fits</h3>
-      <div class="tags-wrap">${(a.ideal_role_fit||[]).map(r => tag(r, 'accent')).join('')}</div>
-    </div>` : ''}
-  </div>
-
-  <div class="ov-two-col">
-    ${(a.inferred_skills||[]).length ? `<div>
-      <h3 class="section-heading">Inferred Skills</h3>
-      <p class="body-text" style="font-size:12.5px;color:var(--tx-3);margin-bottom:10px">Not explicitly listed, but strongly implied by their experience.</p>
-      <div class="tags-wrap">${(a.inferred_skills||[]).map(s => tag(s, '')).join('')}</div>
-    </div>` : ''}
-    ${(a.growth_signals||[]).length ? `<div>
-      <h3 class="section-heading">Growth Signals</h3>
-      <div class="quick-wins">${(a.growth_signals||[]).map(g => `<div class="quick-win-item">${g}</div>`).join('')}</div>
-    </div>` : ''}
-  </div>
-
-  ${(a.education||[]).length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Education</h3>
-    <div style="display:flex;flex-direction:column;gap:0">
-      ${(a.education||[]).map(e => `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--rule-1)">
-        <div>
-          <div style="font-weight:600;font-size:13.5px;color:var(--tx-1)">${e.degree||''}</div>
-          <div style="font-size:13px;color:var(--accent);margin-top:2px">${e.institution||''}</div>
-          ${(e.relevant_coursework||[]).length ? `<div class="tags-wrap" style="margin-top:8px">${e.relevant_coursework.map(c => tag(c, '')).join('')}</div>` : ''}
-        </div>
-        <div style="font-family:var(--font-mono);font-size:12px;color:var(--tx-3)">${e.year||''}</div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}
-
-  ${(a.certifications||[]).length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Certifications</h3>
-    <div class="tags-wrap">${(a.certifications||[]).map(c => tag(c, '')).join('')}</div>
-  </div>` : ''}
-
-  ${(a.projects||[]).length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Notable Projects</h3>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      ${(a.projects||[]).map(p => `
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-          <span style="font-weight:600;font-size:14px;color:var(--tx-1)">${p.name||''}</span>
-          ${p.impact ? `<span style="font-family:var(--font-mono);font-size:11.5px;color:var(--green)">${p.impact}</span>` : ''}
-        </div>
-        <p class="body-text" style="font-size:12.5px;margin-bottom:10px">${p.description||''}</p>
-        <div class="tags-wrap">${(p.technologies||[]).map(t => tag(t, '')).join('')}</div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}`;
-}
-
-/* ──────────────────────────────────────
-   ATS SCORES
-────────────────────────────────────── */
-function renderATS(a) {
-  const sc = a.overall_score || 0;
-  const jd = a.jd_match_score;
-  const ats = a.ats_scores || {};
-  const circ = 2 * Math.PI * 44;
-
-  const axisLabels = {
-    keyword_density:   { name: 'Keyword Density',     sub: 'Role-relevant terms in context' },
-    format_quality:    { name: 'Format Quality',       sub: 'Structure and ATS parseability' },
-    experience_depth:  { name: 'Experience Depth',     sub: 'Detail and context per role' },
-    skills_coverage:   { name: 'Skills Coverage',      sub: 'Breadth of skill portfolio' },
-    achievement_impact:{ name: 'Achievement Impact',   sub: 'Quantified results present' },
-    career_progression:{ name: 'Career Progression',   sub: 'Growth trajectory clarity' },
-  };
-
-  const rings = [
-    { val: sc, label: 'Overall Score',  id: 'ring-overall', color: '#5b5bd6' },
-    ...(jd != null ? [{ val: jd, label: 'JD Match',  id: 'ring-jd', color: '#25a56a' }] : []),
-  ];
-
-  setTimeout(() => {
-    rings.forEach(r => {
-      const el = $(r.id);
-      if (el) {
-        el.style.strokeDasharray = circ;
-        el.style.strokeDashoffset = circ;
-        requestAnimationFrame(() => setTimeout(() => {
-          el.style.strokeDashoffset = circ * (1 - r.val / 100);
-        }, 100));
-      }
-    });
-  }, 50);
-
-  return `
-  <div class="section-block">
     <div class="score-ring-wrap">
-      ${rings.map(r => `
-      <div class="score-ring-block">
-        <svg class="score-ring-svg" viewBox="0 0 100 100" width="100" height="100">
-          <circle cx="50" cy="50" r="44" fill="none" stroke="var(--surface-3)" stroke-width="7"/>
-          <circle id="${r.id}" cx="50" cy="50" r="44" fill="none"
-            stroke="${r.color}" stroke-width="7" stroke-linecap="round"
-            style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)"/>
+      <div class="score-ring-inner">
+        <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+          <circle class="score-ring-track" cx="60" cy="60" r="54"/>
+          <circle class="score-ring-fill"  cx="60" cy="60" r="54" data-pct="84" stroke="var(--accent)"/>
         </svg>
-        <div class="ring-big-num">${r.val}</div>
-        <div class="ring-label">${r.label}</div>
-      </div>`).join('')}
-      <div style="flex:1">
-        <p class="body-text">${a.hire_rationale || a.professional_summary || ''}</p>
-        ${a.hire_recommendation ? `<div style="margin-top:12px">${tag(a.hire_recommendation, a.hire_recommendation.includes('Strongly')?'green':a.hire_recommendation.includes('Caution')?'amber':a.hire_recommendation.includes('Not')?'red':'accent')}</div>` : ''}
+        <div class="score-ring-text">
+          <span class="score-ring-num" style="color:var(--accent)">84</span>
+          <span class="score-ring-lbl">/100</span>
+        </div>
+      </div>
+      <div class="score-ring-desc">
+        <h3>Composite ATS Score</h3>
+        <p>Priya scores in the <strong>top 12%</strong> of candidates evaluated for this role. Strong technical depth with demonstrable impact metrics. Minor gaps in system design breadth.</p>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="item-badge badge-teal">Strong Hire</span>
+          <span class="item-badge badge-blue">7 yrs exp</span>
+          <span class="item-badge badge-violet">ML / Backend</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="section-block">
-    <h3 class="section-heading">Six-Axis Breakdown</h3>
-    <div class="ats-bars-list">
-      ${Object.entries(axisLabels).map(([k, meta]) => {
-        const v = ats[k] ?? 0;
-        const cls = v >= 70 ? 'bar-green' : v >= 45 ? 'bar-amber' : 'bar-red';
-        return `
-        <div class="ats-bar-item">
-          <div class="score-label">
-            <span class="score-name">${meta.name}</span>
-            <span class="score-num-small">${v}%</span>
-          </div>
-          <div class="bar-track">
-            <div class="bar-fill ${cls}" style="width:0%" data-w="${v}%"></div>
-          </div>
-          <div class="ats-bar-sub">${meta.sub}</div>
-        </div>`;
-      }).join('')}
+    <div class="axis-grid">
+      ${axisCard('Technical Skills',   91, 'var(--blue)')}
+      ${axisCard('Experience Depth',   82, 'var(--accent)')}
+      ${axisCard('Impact & Outcomes',  78, 'var(--green)')}
+      ${axisCard('Communication',      76, 'var(--violet)')}
+      ${axisCard('Leadership Signals', 72, 'var(--amber)')}
+      ${axisCard('Cultural Fit',       88, 'var(--pink)')}
     </div>
-  </div>`;
+
+    <div class="stat-stripe">
+      <div class="stat-card">
+        <div class="stat-label">JD Match</div>
+        <div class="stat-val" style="color:var(--accent)">79%</div>
+        <div class="stat-sub">↑ above average</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="background:var(--accent)" data-w="79"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Impact Score</div>
+        <div class="stat-val" style="color:var(--green)">7.8</div>
+        <div class="stat-sub">Quantified achievements</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="background:var(--green)" data-w="78"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Bias Risk</div>
+        <div class="stat-val" style="color:var(--amber)">Low</div>
+        <div class="stat-sub">2 PII signals detected</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="background:var(--amber)" data-w="18"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Real Skills</div>
+        <div class="stat-val" style="color:var(--blue)">73%</div>
+        <div class="stat-sub">vs 27% buzz keywords</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="background:var(--blue)" data-w="73"></div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card-block">
+        <div class="card-block-title">Top Strengths</div>
+        <div class="item-list">
+          ${listItem('green', '✓', 'Python &amp; ML stack depth — 5+ years hands-on production experience')}
+          ${listItem('green', '✓', 'Quantified impact on 3 major product launches, &gt;$2M revenue attribution')}
+          ${listItem('green', '✓', 'Cross-functional leadership across 8-person engineering pods')}
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title">Key Gaps</div>
+        <div class="item-list">
+          ${listItem('red',   '!', 'No formal distributed systems architecture experience documented')}
+          ${listItem('amber', '~', 'Kubernetes mentioned once — likely surface-level exposure')}
+          ${listItem('amber', '~', 'No mention of A/B testing frameworks or experimentation culture')}
+        </div>
+      </div>
+    </div>`;
 }
 
-/* ──────────────────────────────────────
-   SKILLS
-────────────────────────────────────── */
-function renderSkills(a) {
-  const sk = a.technical_skills || {};
+function skills() {
   const groups = [
-    { name: 'Languages',              items: sk.languages,    cls: 'accent' },
-    { name: 'Frameworks & Libraries', items: sk.frameworks,   cls: '' },
-    { name: 'Databases',              items: sk.databases,    cls: '' },
-    { name: 'Cloud & DevOps',         items: sk.cloud_devops, cls: '' },
-    { name: 'AI / ML',                items: sk.ai_ml,        cls: 'accent' },
-    { name: 'Tools',                  items: sk.tools,        cls: '' },
-    { name: 'Other',                  items: sk.other,        cls: '' },
-    { name: 'Soft Skills',            items: a.soft_skills,   cls: '' },
-  ].filter(g => g.items?.length);
+    { label: 'Languages',       color: 'var(--blue)',   items: ['Python·Expert','SQL·Advanced','TypeScript·Advanced','Go·Intermediate','Scala·Beginner'] },
+    { label: 'ML / AI',         color: 'var(--violet)', items: ['PyTorch·Expert','Scikit-learn·Expert','HuggingFace·Advanced','LangChain·Advanced','MLflow·Intermediate'] },
+    { label: 'Infrastructure',  color: 'var(--accent)', items: ['AWS·Advanced','Docker·Advanced','Terraform·Intermediate','Kubernetes·Beginner','GCP·Beginner'] },
+    { label: 'Data Engineering', color: 'var(--green)', items: ['Spark·Advanced','dbt·Advanced','Airflow·Advanced','Snowflake·Intermediate','Kafka·Intermediate'] },
+  ];
+  const levelPct = { Expert: 92, Advanced: 72, Intermediate: 50, Beginner: 28 };
 
   return `
-  <div class="section-block">
-    <div class="skills-cols">
-      ${groups.map(g => `
-      <div class="card skill-group">
-        <div class="skill-group-name">${g.name}</div>
-        <div class="tags-wrap">${g.items.map(s => tag(s, g.cls)).join('')}</div>
-      </div>`).join('')}
-    </div>
-  </div>
-
-  ${(a.inferred_skills||[]).length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Inferred Skills</h3>
-    <p class="body-text" style="margin-bottom:12px">Not explicitly stated, but strongly implied by the candidate's demonstrated experience.</p>
-    <div class="tags-wrap">${(a.inferred_skills||[]).map(s => tag(s, '')).join('')}</div>
-  </div>` : ''}
-
-  ${(a.transferable_skills||[]).length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Transferable Skills</h3>
-    <p class="body-text" style="margin-bottom:12px">Cross-domain capabilities that add unique value in this role.</p>
-    <div class="tags-wrap">${(a.transferable_skills||[]).map(s => tag(s, '')).join('')}</div>
-  </div>` : ''}`;
-}
-
-/* ──────────────────────────────────────
-   EXPERIENCE
-────────────────────────────────────── */
-function renderExperience(a) {
-  const exps = a.work_experience || [];
-  if (!exps.length) return emptyState('No work experience found in the resume.');
-  return `
-  <div class="exp-list">
-    ${exps.map(e => `
-    <div class="exp-entry">
-      <div class="exp-timeline-col">
-        <div class="exp-dot"></div>
-        <div class="exp-line"></div>
-      </div>
-      <div class="exp-card">
-        <div class="exp-header">
-          <div class="exp-title">${e.role || ''}</div>
-          <div class="exp-tenure">${e.duration || ''}</div>
+    <div class="section-h">Skills Intelligence</div>
+    <div class="section-sub">Validated technical skills with evidence-based proficiency ratings</div>
+    ${groups.map(g => `
+      <div class="card-block" style="margin-bottom:16px">
+        <div class="card-block-title">${g.label}</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${g.items.map(item => {
+            const [name, level] = item.split('·');
+            const pct = levelPct[level] || 50;
+            return `<div class="bias-row">
+              <div class="bias-label" style="font-size:.78rem;color:var(--text);font-weight:500">${name}</div>
+              <div class="bias-track"><div class="bias-fill" style="background:${g.color}" data-w="${pct}"></div></div>
+              <div class="bias-score" style="color:${g.color}">${level}</div>
+            </div>`;
+          }).join('')}
         </div>
-        <div class="exp-company">${e.company || ''}</div>
-        <ul class="exp-bullets">
-          ${(e.key_achievements||[]).map(ach => `<li>${ach}</li>`).join('')}
-        </ul>
-        ${(e.impact_metrics||[]).length ? `<div class="exp-metrics">${e.impact_metrics.map(m => tag(m, 'green')).join('')}</div>` : ''}
-        ${(e.skills_demonstrated||[]).length ? `<div class="tags-wrap" style="margin-top:10px">${e.skills_demonstrated.map(s => tag(s, 'accent')).join('')}</div>` : ''}
-      </div>
-    </div>`).join('')}
-  </div>`;
+      </div>`).join('')}`;
 }
 
-/* ──────────────────────────────────────
-   STRENGTHS & GAPS
-────────────────────────────────────── */
-function renderAnalysis(a) {
-  const strengths = a.top_strengths || [];
-  const gaps = a.potential_gaps || [];
-  const rarityTag = r => tag(r, r==='Rare'?'accent':r==='Uncommon'?'':'' );
-  const sevTag = s => tag(s, s==='Critical'?'red':s==='Moderate'?'amber':'');
-
+function experience() {
   return `
-  <div class="section-block">
-    <h3 class="section-heading">Top Strengths</h3>
-    <div class="str-gap-grid">
-      ${strengths.map(s => `
-      <div class="sg-item sg-item--strength">
-        <div class="sg-item-title">${s.strength || s}</div>
-        <div class="sg-item-body">${s.evidence || ''}</div>
-        ${s.rarity ? `<div class="sg-item-footer">${rarityTag(s.rarity)}</div>` : ''}
-      </div>`).join('') || '<p class="body-text">None identified.</p>'}
+    <div class="section-h">Work Experience</div>
+    <div class="section-sub">Chronological career timeline with AI-extracted impact signals</div>
+    <div class="card-block">
+      <div class="timeline">
+        ${tlItem('Senior ML Engineer', 'Stripe Inc.', 'Jan 2022 – Present',
+          'Led ML platform team building real-time fraud detection serving 50M+ transactions/day. Reduced false positives by 31% while improving model latency from 120ms to 18ms. Mentored 4 junior engineers; introduced MLOps practices cutting deployment time by 60%.')}
+        ${tlItem('ML Engineer', 'Flipkart', 'Aug 2019 – Dec 2021',
+          'Built recommendation engine increasing GMV by $1.2M quarterly. Owned end-to-end model lifecycle from feature engineering to A/B rollout. Collaborated with product &amp; design on personalization roadmap.')}
+        ${tlItem('Data Scientist', 'Mu Sigma', 'Jun 2017 – Jul 2019',
+          'Delivered 12 client analytics projects across retail and BFSI verticals. Developed churn prediction model achieving 86% precision for a telecom client.')}
+      </div>
     </div>
-  </div>
-
-  <div class="section-block">
-    <h3 class="section-heading">Potential Gaps</h3>
-    <div class="str-gap-grid">
-      ${gaps.map(g => `
-      <div class="sg-item sg-item--gap">
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-          <div class="sg-item-title" style="margin:0">${g.gap || g}</div>
-          ${g.severity ? sevTag(g.severity) : ''}
+    <div class="two-col" style="margin-top:16px">
+      <div class="card-block">
+        <div class="card-block-title">Education</div>
+        <div class="timeline">
+          ${tlItem('M.Tech Computer Science', 'IIT Bombay', '2015 – 2017',
+            'Specialisation in Machine Learning. CGPA 9.1/10. Thesis on adversarial robustness in NLP.')}
+          ${tlItem('B.Tech CS &amp; Engineering', 'NIT Trichy', '2011 – 2015',
+            'Gold Medallist. CGPA 9.4/10.')}
         </div>
-        <div class="sg-item-body">${g.suggestion || ''}</div>
-      </div>`).join('') || '<p class="body-text">No significant gaps identified.</p>'}
-    </div>
-  </div>`;
-}
-
-/* ──────────────────────────────────────
-   JD MATCH
-────────────────────────────────────── */
-function renderJDMatch(a) {
-  if (a.jd_match_score == null) {
-    return `<div class="empty-state">
-      <div class="empty-state-title">No job description provided</div>
-      <p class="body-text">Start a new analysis and paste a job description to unlock role alignment scoring, skill gap analysis, and role-specific questions.</p>
-      <button onclick="resetApp()" style="margin-top:20px;background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-ui)">Start new analysis</button>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title">Certifications &amp; Awards</div>
+        <div class="item-list">
+          ${listItem('blue',   '🏅', 'AWS Certified ML Specialist — 2023')}
+          ${listItem('blue',   '🏅', 'Google Professional Data Engineer — 2022')}
+          ${listItem('violet', '★',  'Stripe Hack Day Winner — Fraud Detection Track (2023)')}
+          ${listItem('green',  '↑',  'Top 5% Performer — Flipkart 2020 &amp; 2021')}
+        </div>
+      </div>
     </div>`;
-  }
-  const matched = a.jd_matched_skills || [], missing = a.jd_missing_skills || [];
-  const sc = a.jd_match_score || 0;
-  const cls = sc >= 70 ? 'bar-green' : sc >= 45 ? 'bar-amber' : 'bar-red';
+}
 
+function analysis() {
   return `
-  <div class="section-block">
-    <div class="kv-row">
-      <div class="kv-cell"><div class="kv-val">${sc}%</div><div class="kv-lbl">Match Score</div></div>
-      <div class="kv-cell"><div class="kv-val">${matched.length}</div><div class="kv-lbl">Skills Matched</div></div>
-      <div class="kv-cell"><div class="kv-val">${missing.length}</div><div class="kv-lbl">Skills Missing</div></div>
+    <div class="section-h">Strengths &amp; Gaps Analysis</div>
+    <div class="section-sub">AI-generated assessment of candidate fit for the target role</div>
+    <div class="item-list" style="margin-bottom:24px">
+      ${listItem('green', 'S', 'Deep production ML expertise — fraud detection, recommendations at scale with measurable outcomes.', 'Strong Match')}
+      ${listItem('green', 'S', 'Strong Python + data engineering stack (Spark, dbt, Airflow). Rarely seen with both ML depth and pipeline robustness.', 'Rare Combo')}
+      ${listItem('green', 'S', 'Demonstrated cross-functional leadership and mentorship. Shows readiness for Staff/Principal IC trajectory.', 'Leadership+')}
+      ${listItem('amber', '~', 'AWS knowledge claimed but limited detail on infra-as-code beyond basic Terraform. JD requires cloud architecture ownership.', 'Partial Match')}
+      ${listItem('red',   'G', 'No distributed systems design experience documented (consensus protocols, event sourcing, CQRS). JD specifies this as required.', 'Gap')}
+      ${listItem('red',   'G', 'Experimentation/A-B testing framework design absent from resume. JD expects ownership of this capability.', 'Gap')}
     </div>
-    <div class="bar-track" style="margin-bottom:20px">
-      <div class="bar-fill ${cls}" style="width:0%" data-w="${sc}%"></div>
-    </div>
-  </div>
-
-  <div class="jd-skills-grid">
-    <div class="card jd-col-green">
-      <div class="jd-col-title">Matched Skills</div>
-      <div class="tags-wrap">${matched.map(s => tag(s, 'green')).join('') || '<span class="body-text">None matched.</span>'}</div>
-    </div>
-    <div class="card jd-col-red">
-      <div class="jd-col-title">Missing Skills</div>
-      <div class="tags-wrap">${missing.map(s => tag(s, 'red')).join('') || '<span class="body-text" style="color:var(--green)">No skill gaps found.</span>'}</div>
-    </div>
-  </div>
-
-  ${a.jd_match_summary ? `
-  <div class="section-block" style="margin-top:16px">
-    <h3 class="section-heading">Match Analysis</h3>
-    <div class="callout">${a.jd_match_summary}</div>
-  </div>` : ''}`;
-}
-
-/* ──────────────────────────────────────
-   QUESTIONS
-────────────────────────────────────── */
-function renderQuestions(qs, type) {
-  if (!qs.length) return emptyState(`No ${type.toLowerCase()} questions were generated.`);
-  return `<div class="q-index">${qs.map((q, i) => {
-    const d = q.difficulty || '';
-    const dtag = d ? tag(d, d==='Easy'?'green':d==='Hard'?'red':'amber') : '';
-    const ctag = q.skill_tested ? tag(q.skill_tested, 'accent') : (q.competency ? tag(q.competency, 'accent') : '');
-    const details = [
-      q.expected_answer_hint && { label: 'Look for', val: q.expected_answer_hint },
-      q.what_to_listen_for   && { label: 'Listen for', val: q.what_to_listen_for },
-      q.star_guidance        && { label: 'STAR probe', val: q.star_guidance },
-      q.ideal_approach       && { label: 'Ideal approach', val: q.ideal_approach },
-      q.what_to_avoid        && { label: 'Watch for', val: q.what_to_avoid },
-      q.green_flag_answer    && { label: 'Strong answer', val: q.green_flag_answer },
-      q.red_flag_answer      && { label: 'Weak answer', val: q.red_flag_answer },
-      q.scoring_rubric       && { label: 'Scoring rubric', val: q.scoring_rubric },
-      q.follow_up            && { label: 'Follow-up', val: q.follow_up },
-    ].filter(Boolean);
-    return `
-    <div class="q-item">
-      <div class="q-header">
-        <span class="q-number">Q${i+1}</span>
-        <div class="q-text">${q.question}</div>
-      </div>
-      ${(dtag||ctag) ? `<div class="q-tags">${[ctag,dtag].filter(Boolean).join('')}</div>` : ''}
-      ${details.length ? `<div class="q-detail">
-        ${details.map(d => `<div class="q-detail-row"><strong>${d.label}:</strong> ${d.val}</div>`).join('')}
-      </div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-
-/* ──────────────────────────────────────
-   DEEP DIVE + CULTURE FIT
-────────────────────────────────────── */
-function renderDeepDive(q) {
-  const dd = q.deep_dive_questions || [];
-  const cf = q.culture_fit_questions || [];
-  return `
-  <div class="section-block">
-    <h3 class="section-heading">Deep Dive — Resume-Specific Probes</h3>
-    <div class="q-index">${dd.map((q, i) => `
-      <div class="q-item">
-        <div class="q-header">
-          <span class="q-number">D${i+1}</span>
-          <div class="q-text">${q.question}</div>
-        </div>
-        ${q.target ? `<div class="q-tags">${tag(q.target, '')}</div>` : ''}
-        <div class="q-detail">
-          ${q.intent ? `<div class="q-detail-row"><strong>Intent:</strong> ${q.intent}</div>` : ''}
-          ${q.expected_depth ? `<div class="q-detail-row"><strong>Depth expected:</strong> ${q.expected_depth}</div>` : ''}
-        </div>
-      </div>`).join('') || '<p class="body-text">No deep-dive questions generated.</p>'}
-    </div>
-  </div>
-  <div class="section-block">
-    <h3 class="section-heading">Culture Fit Questions</h3>
-    <div class="q-index">${cf.map((q, i) => `
-      <div class="q-item">
-        <div class="q-header">
-          <span class="q-number">C${i+1}</span>
-          <div class="q-text">${q.question}</div>
-        </div>
-        <div class="q-detail">
-          ${q.what_to_listen_for ? `<div class="q-detail-row"><strong>Listen for:</strong> ${q.what_to_listen_for}</div>` : ''}
-          ${(q.alignment_signals||[]).length ? `<div class="q-detail-row"><strong>Alignment signals:</strong> ${q.alignment_signals.join(', ')}</div>` : ''}
-        </div>
-      </div>`).join('') || '<p class="body-text">No culture fit questions generated.</p>'}
-    </div>
-  </div>`;
-}
-
-/* ──────────────────────────────────────
-   RED FLAGS
-────────────────────────────────────── */
-function renderRedFlags(probes, resumeFlags) {
-  return `
-  ${resumeFlags.length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Resume Red Flags</h3>
-    <div class="q-index">
-      ${resumeFlags.map((f, i) => `
-      <div class="q-item">
-        <div class="q-header">
-          <span class="q-number">F${i+1}</span>
-          <div class="q-text">${f.flag || f}</div>
-        </div>
-        <div class="q-detail">
-          ${f.explanation ? `<div class="q-detail-row"><strong>Explanation:</strong> ${f.explanation}</div>` : ''}
-          ${f.probe_question ? `<div class="q-detail-row"><strong>Suggested probe:</strong> ${f.probe_question}</div>` : ''}
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}
-  <div class="section-block">
-    <h3 class="section-heading">Red Flag Interview Probes</h3>
-    <div class="q-index">
-      ${probes.map((p, i) => `
-      <div class="q-item">
-        <div class="q-header">
-          <span class="q-number">${tag('Probe', 'red')}</span>
-          <div class="q-text">${p.question}</div>
-        </div>
-        <div class="q-detail">
-          ${p.concern ? `<div class="q-detail-row"><strong>Concern:</strong> ${p.concern}</div>` : ''}
-          ${p.green_flag_answer ? `<div class="q-detail-row"><strong>Strong answer:</strong> ${p.green_flag_answer}</div>` : ''}
-          ${p.red_flag_answer ? `<div class="q-detail-row"><strong>Concerning answer:</strong> ${p.red_flag_answer}</div>` : ''}
-        </div>
-      </div>`).join('') || emptyState('No red flag probes generated.')}
-    </div>
-  </div>`;
-}
-
-/* ──────────────────────────────────────
-   BIAS AUDIT
-────────────────────────────────────── */
-function renderBias(bias) {
-  if (!bias || !Object.keys(bias).length) return emptyState('Bias report not available.');
-  const pii = bias.pii_detected || {};
-  const vectors = bias.potential_bias_vectors || [];
-  const merit = bias.merit_indicators || [];
-  const blind = bias.recommended_blind_fields || [];
-
-  return `
-  <div class="section-block">
-    <div class="kv-row">
-      <div class="kv-cell">
-        <div class="kv-val">${bias.fairness_score ?? '—'}</div>
-        <div class="kv-lbl">Fairness Score</div>
-      </div>
-      <div class="kv-cell" style="flex:3">
-        <div class="kv-val" style="font-size:14px;font-family:var(--font-ui)">${bias.blind_review_recommendation || '—'}</div>
-        <div class="kv-lbl">Blind Review Recommendation</div>
-      </div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-    <div class="card">
-      <div class="card-title">PII Detection Scan</div>
-      <table class="pii-table">
-        ${Object.entries(pii).map(([k,v]) => `
-        <tr>
-          <td>${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</td>
-          <td>${tag(v ? 'Detected' : 'Clear', v ? 'amber' : 'green')}</td>
-        </tr>`).join('')}
-      </table>
-    </div>
-    <div class="card">
-      <div class="card-title">Recommended Blind Fields</div>
-      <div class="quick-wins" style="margin-bottom:16px">
-        ${blind.map(b => `<div class="quick-win-item">${b}</div>`).join('') || '<p class="body-text">None recommended.</p>'}
-      </div>
-      ${merit.length ? `<div class="card-title" style="margin-top:4px">Merit Anchors</div>
-      <div class="quick-wins">${merit.map(m => `<div class="quick-win-item">${m}</div>`).join('')}</div>` : ''}
-    </div>
-  </div>
-
-  <div class="section-block">
-    <h3 class="section-heading">Bias Vectors</h3>
-    ${vectors.map(v => `
-    <div class="bias-vector-item">
-      <div class="bias-vector-hdr">
-        <span class="bias-vector-name">${v.vector||''}</span>
-        ${tag(v.risk_level||'', v.risk_level==='High'?'red':v.risk_level==='Medium'?'amber':'green')}
-      </div>
-      <p class="body-text" style="margin-bottom:6px">${v.explanation||''}</p>
-      <p class="body-text"><strong>Mitigation:</strong> ${v.mitigation||''}</p>
-    </div>`).join('') || '<p class="body-text">No significant bias vectors identified.</p>'}
-  </div>
-
-  ${bias.evaluation_guidance ? `
-  <div class="section-block">
-    <h3 class="section-heading">Evaluation Guidance</h3>
-    <div class="callout callout-green">${bias.evaluation_guidance}</div>
-  </div>` : ''}`;
-}
-
-/* ──────────────────────────────────────
-   COACHING
-────────────────────────────────────── */
-function renderCoaching(coaching, a) {
-  if (!coaching || !Object.keys(coaching).length) return emptyState('Coaching report not available.');
-  const roadmap = coaching.improvement_roadmap || [];
-  const wins = coaching.quick_wins || [];
-  const courses = coaching.skill_gap_courses || [];
-  const strengths = coaching.key_strengths_recognized || [];
-
-  return `
-  ${coaching.overall_assessment ? `
-  <div class="section-block">
-    <h3 class="section-heading">Assessment</h3>
-    <div class="callout">${coaching.overall_assessment}</div>
-  </div>` : ''}
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-    <div>
-      <h3 class="section-heading">Recognised Strengths</h3>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${strengths.map(s => `
-        <div class="card" style="border-left:2px solid var(--green)">
-          <div style="font-weight:600;color:var(--tx-1);margin-bottom:3px">${s.strength||s}</div>
-          <div class="body-text">${s.why_it_matters||''}</div>
-        </div>`).join('') || '<p class="body-text">None identified.</p>'}
-      </div>
-    </div>
-    <div>
-      <h3 class="section-heading">Quick Wins — Next 7 Days</h3>
-      <div class="quick-wins">
-        ${wins.map(w => `<div class="quick-win-item">${w}</div>`).join('') || '<p class="body-text">No quick wins available.</p>'}
-      </div>
-    </div>
-  </div>
-
-  <div class="section-block">
-    <h3 class="section-heading">Improvement Roadmap</h3>
-    ${roadmap.map(r => `
-    <div class="roadmap-item">
-      <div class="roadmap-area">${r.area||''}</div>
-      <div class="roadmap-action">${r.specific_action||''}</div>
-      <div class="roadmap-tags">
-        ${r.timeline ? tag(r.timeline, 'accent') : ''}
-        ${(r.resources||[]).map(res => tag(res, '')).join('')}
-      </div>
-    </div>`).join('') || '<p class="body-text">No roadmap available.</p>'}
-  </div>
-
-  ${courses.length ? `
-  <div class="section-block">
-    <h3 class="section-heading">Recommended Courses</h3>
-    <div class="card">
-      ${courses.map(c => `
-      <div class="course-row">
-        <div style="flex:1">
-          <div class="course-skill">${c.skill||''}</div>
-          <div class="course-name">${c.recommended_course||''}</div>
-          <div class="course-detail">${c.platform||''} ${c.estimated_time ? '· '+c.estimated_time : ''}</div>
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>` : ''}
-
-  ${coaching.career_advice ? `
-  <div class="section-block">
-    <h3 class="section-heading">Career Advice</h3>
-    <div class="callout callout-green"><em>${coaching.career_advice}</em></div>
-  </div>` : ''}
-
-  <div class="section-block">
-    <h3 class="section-heading">Generate Feedback Letter</h3>
-    <div class="card">
-      <div class="gen-form">
-        <div class="gen-field">
-          <label class="gen-label">Job Title</label>
-          <input id="fb-role" class="gen-input" placeholder="e.g. Senior Engineer" value="${a.current_role||''}">
-        </div>
-        <div class="gen-field">
-          <label class="gen-label">Decision</label>
-          <select id="fb-decision" class="gen-input" style="cursor:pointer">
-            <option value="Not Selected">Not Selected</option>
-            <option value="Moving Forward">Moving Forward</option>
-            <option value="On Hold">On Hold</option>
-          </select>
-        </div>
-        <button class="gen-btn" onclick="runFeedbackLetter()">Generate letter</button>
-      </div>
-      <div id="feedback-output"></div>
-    </div>
-  </div>`;
-}
-
-/* ──────────────────────────────────────
-   OUTREACH
-────────────────────────────────────── */
-function renderOutreach(a) {
-  return `
-  <div class="section-block">
-    <h3 class="section-heading">Personalised Outreach Generator</h3>
-    <div class="callout" style="margin-bottom:20px">Generate a hyper-personalised candidate outreach email based on their specific background, skills, and value proposition — not a generic template.</div>
-    <div class="card">
-      <div class="gen-form">
-        <div class="gen-field">
-          <label class="gen-label">Role You're Recruiting For</label>
-          <input id="or-role" class="gen-input" placeholder="e.g. Senior Backend Engineer">
-        </div>
-        <div class="gen-field">
-          <label class="gen-label">Your Company</label>
-          <input id="or-company" class="gen-input" placeholder="Company name">
-        </div>
-        <button class="gen-btn" onclick="runOutreachEmail()">Generate email</button>
-      </div>
-      <div id="outreach-output"></div>
-    </div>
-  </div>`;
-}
-
-/* ──────────────────────────────────────
-   GENERATORS (API CALLS)
-────────────────────────────────────── */
-async function runOutreachEmail() {
-  const role = $('or-role')?.value || 'Software Engineer';
-  const company = $('or-company')?.value || 'Our Company';
-  const out = $('outreach-output');
-  out.innerHTML = '<div class="loading-inline">Generating personalised outreach email…</div>';
-
-  try {
-    const r = await fetch(`${API}/generate-outreach`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ profile: reportData.analysis, job_title: role, company_name: company })
-    });
-    const d = await r.json();
-    if (!d.email_body) throw new Error('Generation failed');
-
-    out.innerHTML = `
-    <div class="email-display">
-      <div class="email-meta">
-        <span><strong>Subject:</strong> ${d.subject_line || '—'}</span>
-        <button class="copy-btn" onclick="copyText(\`${(d.subject_line+'\n\n'+d.email_body).replace(/`/g,'\\`').replace(/\n/g,'\\n')}\`)">
-          ${icon('copy')} Copy
-        </button>
-      </div>
-      <div class="email-body">${d.email_body || ''}</div>
-    </div>
-    ${(d.follow_up_subject) ? `
     <div class="divider"></div>
-    <p class="body-text" style="margin-bottom:10px"><strong>Follow-up (5 days later)</strong></p>
-    <div class="email-display">
-      <div class="email-meta"><span><strong>Subject:</strong> ${d.follow_up_subject}</span></div>
-      <div class="email-body">${d.follow_up_body||''}</div>
-    </div>` : ''}
-    ${(d.personalization_hooks||[]).length ? `<div class="divider"></div><p class="card-title">Personalisation Hooks</p><div class="tags-wrap">${d.personalization_hooks.map(h=>tag(h,'')).join('')}</div>` : ''}`;
-  } catch(e) {
-    out.innerHTML = `<div class="error-msg">${e.message}</div>`;
-  }
-}
-
-async function runFeedbackLetter() {
-  const role = $('fb-role')?.value || 'Software Engineer';
-  const decision = $('fb-decision')?.value || 'Not Selected';
-  const out = $('feedback-output');
-  out.innerHTML = '<div class="loading-inline">Generating candidate feedback letter…</div>';
-
-  try {
-    const r = await fetch(`${API}/generate-feedback-letter`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ profile: reportData.analysis, decision, job_title: role })
-    });
-    const d = await r.json();
-    if (!d.letter_body) throw new Error('Generation failed');
-
-    out.innerHTML = `
-    <div class="divider"></div>
-    <div class="email-display">
-      <div class="email-meta">
-        <span><strong>Subject:</strong> ${d.subject_line||'—'}</span>
-        <button class="copy-btn" onclick="copyText(\`${((d.subject_line||'')+'\n\n'+(d.letter_body||'')).replace(/`/g,'\\`').replace(/\n/g,'\\n')}\`)">
-          ${icon('copy')} Copy
-        </button>
-      </div>
-      <div class="email-body">${d.letter_body||''}</div>
+    <div class="section-h" style="font-size:.92rem;margin-bottom:16px">Interviewer Recommendation</div>
+    <div class="card-block" style="border-left:3px solid var(--accent)">
+      <p style="font-size:.83rem;line-height:1.7;color:var(--text-2)">
+        Priya is a <strong style="color:var(--text)">strong technical candidate</strong> with demonstrated ML engineering excellence and tangible business impact.
+        Recommend progressing to technical rounds with <strong style="color:var(--text)">focused probing on distributed systems design</strong> and
+        experimentation platform ownership. If system design gaps can be bridged through onboarding, this is a high-confidence hire
+        for the Senior or Staff ML Engineer role. <em style="color:var(--accent)">Suggested offer range: ₹55–65L CTC.</em>
+      </p>
     </div>`;
-  } catch(e) {
-    out.innerHTML = `<div class="error-msg">${e.message}</div>`;
-  }
 }
 
-/* ──────────────────────────────────────
-   ICON SYSTEM
-────────────────────────────────────── */
-const ICONS = {
-  mail:    `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2" width="11" height="8" rx="1" stroke="currentColor" stroke-width="1"/><path d="M.5 3l5.5 4L11 3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-  linkedin:`<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1"/><path d="M3 5v4M3 3.5V3M5 9V6.5c0-1 .5-1.5 1.5-1.5S8 5.5 8 6.5V9" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-  github:  `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 00-1.58 9.74c.25.05.34-.11.34-.24v-.85C3.1 9.91 2.8 8.9 2.8 8.9c-.23-.58-.56-.73-.56-.73-.46-.31.04-.3.04-.3.5.03.77.52.77.52.45.77 1.18.55 1.47.42.05-.33.18-.55.32-.68-1.12-.13-2.3-.56-2.3-2.5 0-.55.2-1 .52-1.36-.05-.13-.22-.64.05-1.34 0 0 .42-.13 1.38.52a4.8 4.8 0 012.5 0c.96-.65 1.38-.52 1.38-.52.27.7.1 1.21.05 1.34.32.36.52.81.52 1.36 0 1.94-1.18 2.37-2.3 2.5.18.16.34.47.34.95v1.4c0 .13.09.29.34.24A5 5 0 006 1z" stroke="currentColor" stroke-width=".5" fill="currentColor"/></svg>`,
-  globe:   `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1"/><path d="M6 1c-1.5 1.5-2 3-2 5s.5 3.5 2 5M6 1c1.5 1.5 2 3 2 5s-.5 3.5-2 5M1 6h10" stroke="currentColor" stroke-width=".9"/></svg>`,
-  pin:     `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 11S2 7.5 2 5a4 4 0 018 0c0 2.5-4 6-4 6z" stroke="currentColor" stroke-width="1"/><circle cx="6" cy="5" r="1.5" stroke="currentColor" stroke-width="1"/></svg>`,
-  copy:    `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1"/><path d="M2 8V2a1 1 0 011-1h6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-};
-const icon = name => ICONS[name] || '';
-
-/* ──────────────────────────────────────
-   UTILITIES
-────────────────────────────────────── */
-function tag(text, variant) {
-  const cls = variant ? `tag tag-${variant}` : 'tag';
-  return `<span class="${cls}">${text}</span>`;
+function impact() {
+  return `
+    <div class="section-h">Impact Quantification</div>
+    <div class="section-sub">Measurable, verified achievements extracted from resume narrative</div>
+    <div class="stat-stripe">
+      <div class="stat-card"><div class="stat-label">Impact Score</div><div class="stat-val" style="color:var(--green)">7.8</div><div class="stat-sub">out of 10</div></div>
+      <div class="stat-card"><div class="stat-label">Quantified Items</div><div class="stat-val">9</div><div class="stat-sub">in resume</div></div>
+      <div class="stat-card"><div class="stat-label">Revenue Impact</div><div class="stat-val" style="color:var(--accent)">$3.2M</div><div class="stat-sub">attributed</div></div>
+      <div class="stat-card"><div class="stat-label">Efficiency Gains</div><div class="stat-val" style="color:var(--blue)">60%</div><div class="stat-sub">avg. improvement</div></div>
+    </div>
+    <div class="item-list">
+      ${listItem('green', '$', 'Reduced fraud false positives by 31% at Stripe — est. $1.8M annual savings in manual review costs', 'High Impact')}
+      ${listItem('green', '$', 'Recommendation engine drove $1.2M quarterly GMV increase at Flipkart — directly attributable revenue', 'High Impact')}
+      ${listItem('green', '↑', 'Model inference latency: 120ms → 18ms (85% improvement). Enabled new real-time product features', 'Performance')}
+      ${listItem('green', '↑', 'MLOps practices reduced model deployment cycle from 3 weeks to 2 days (60% faster)', 'Efficiency')}
+      ${listItem('amber', '~', 'Churn model: 86% precision — strong but no business outcome (revenue retained) is cited', 'Partial')}
+      ${listItem('amber', '~', 'Mentored 4 engineers — valuable signal but no outcomes (promotions, retention) quantified', 'Partial')}
+      ${listItem('red',   '!', '2 STAR-format bullets in early career lack any measurable outcome', 'Missing')}
+    </div>`;
 }
 
-function emptyState(msg) {
-  return `<div class="empty-state"><p class="body-text">${msg}</p></div>`;
+function realvsbuzz() {
+  const real    = ['Python','PyTorch','Scikit-learn','Spark','SQL','dbt','Airflow','AWS','Docker','MLflow','Feature Engineering','Fraud Detection','HuggingFace'];
+  const buzz    = ['Kubernetes','GraphQL','gRPC','Ray','Trino','Flink'];
+  return `
+    <div class="section-h">Real Skills vs Buzz Keywords</div>
+    <div class="section-sub">Semantic analysis distinguishing evidenced skills from keyword stuffing</div>
+    <div class="two-col">
+      <div class="card-block">
+        <div class="card-block-title" style="color:var(--green)">✓ Evidenced Skills (Real)</div>
+        <div class="tag-cloud">${real.map(t => `<span class="tag real">${t}</span>`).join('')}</div>
+        <p style="font-size:.75rem;color:var(--text-2)">Skills backed by project context, metrics, or multi-year mentions across roles.</p>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title" style="color:var(--danger)">✗ Unsubstantiated Keywords (Buzz)</div>
+        <div class="tag-cloud">${buzz.map(t => `<span class="tag buzz">${t}</span>`).join('')}</div>
+        <p style="font-size:.75rem;color:var(--text-2)">Mentioned once without supporting context — likely surface-level or aspirational.</p>
+      </div>
+    </div>
+    <div class="stat-stripe" style="margin-top:16px">
+      <div class="stat-card"><div class="stat-label">Real Skills Ratio</div><div class="stat-val" style="color:var(--green)">73%</div><div class="stat-sub">industry avg: 58%</div><div class="stat-bar"><div class="stat-bar-fill" style="background:var(--green)" data-w="73"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Buzz Keywords</div><div class="stat-val" style="color:var(--danger)">27%</div><div class="stat-sub">below avg (42%)</div><div class="stat-bar"><div class="stat-bar-fill" style="background:var(--danger)" data-w="27"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Keyword Inflation</div><div class="stat-val" style="color:var(--amber)">Low</div><div class="stat-sub">Credibility: High</div></div>
+    </div>`;
 }
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function copyText(text) {
-  const clean = text.replace(/\\n/g, '\n');
-  navigator.clipboard.writeText(clean).then(() => toast('Copied to clipboard', 'success'));
+function jdmatch() {
+  return `
+    <div class="section-h">JD Alignment Analysis</div>
+    <div class="section-sub">Requirement-by-requirement mapping between JD and candidate profile</div>
+    <div class="score-ring-wrap">
+      <div class="score-ring-inner">
+        <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+          <circle class="score-ring-track" cx="60" cy="60" r="54"/>
+          <circle class="score-ring-fill"  cx="60" cy="60" r="54" data-pct="79" stroke="var(--blue)"/>
+        </svg>
+        <div class="score-ring-text">
+          <span class="score-ring-num" style="color:var(--blue)">79%</span>
+          <span class="score-ring-lbl">match</span>
+        </div>
+      </div>
+      <div class="score-ring-desc">
+        <h3>Strong JD Alignment</h3>
+        <p>Candidate meets 17 of 21 stated requirements. 4 gaps identified — 2 hard requirements and 2 preferred. Hard requirements include distributed systems design and experimentation platform ownership.</p>
+      </div>
+    </div>
+    <div class="item-list">
+      ${listItem('green', '✓', '5+ years Python in production systems',                          'Met · Expert')}
+      ${listItem('green', '✓', 'ML model deployment and monitoring at scale',                    'Met · Expert')}
+      ${listItem('green', '✓', 'Experience with Kafka / streaming pipelines',                   'Met · Advanced')}
+      ${listItem('green', '✓', 'Cloud infrastructure (AWS)',                                    'Met · Advanced')}
+      ${listItem('amber', '~', 'Kubernetes &amp; container orchestration',                       'Partial · Beginner')}
+      ${listItem('red',   '✗', 'Distributed systems design (required)',                         'Not Met')}
+      ${listItem('red',   '✗', 'Experimentation platform / A-B framework ownership (required)', 'Not Met')}
+    </div>`;
 }
 
-function toast(msg, type='info') {
-  const el = document.createElement('div');
-  el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+function redflags() {
+  return `
+    <div class="section-h">Red Flags &amp; Risk Signals</div>
+    <div class="section-sub">Potential concerns requiring follow-up during interview process</div>
+    <div class="stat-stripe">
+      <div class="stat-card"><div class="stat-label">Risk Level</div><div class="stat-val" style="color:var(--amber)">Medium</div><div class="stat-sub">3 flags identified</div></div>
+      <div class="stat-card"><div class="stat-label">Hard Flags</div><div class="stat-val" style="color:var(--danger)">1</div><div class="stat-sub">Require clarification</div></div>
+      <div class="stat-card"><div class="stat-label">Soft Flags</div><div class="stat-val" style="color:var(--amber)">2</div><div class="stat-sub">Worth probing</div></div>
+    </div>
+    <div class="item-list">
+      ${listItem('amber', '~', 'Tenure gap: 3-month unaccounted gap between Mu Sigma (Jul 2019) and Flipkart (Aug 2019). Minor — confirm during screening.', 'Soft Flag')}
+      ${listItem('amber', '~', 'All experience at product/tech companies in India. Role requires cross-timezone collaboration — probe for async communication skills.', 'Soft Flag')}
+      ${listItem('red',   '!', 'Buzz skill inflation on Kubernetes and GraphQL — mentioned without supporting context. Probe technically.', 'Hard Flag')}
+    </div>
+    <div class="divider"></div>
+    <div class="card-block" style="border-left:3px solid var(--amber)">
+      <div class="card-block-title" style="color:var(--amber)">Recommended Follow-up Questions</div>
+      <div class="item-list" style="margin-top:10px">
+        ${listItem('amber', 'Q', 'Walk me through a specific Kubernetes deployment you owned end-to-end.')}
+        ${listItem('amber', 'Q', 'What were you working on between July and August 2019?')}
+        ${listItem('amber', 'Q', 'Describe a situation where you collaborated asynchronously with a geographically distributed team.')}
+      </div>
+    </div>`;
 }
+
+function technical() {
+  return `
+    <div class="section-h">Technical Interview Questions</div>
+    <div class="section-sub">AI-generated role-specific questions calibrated to candidate's experience level</div>
+    <div class="qa-list">
+      ${qa(1, 'Design a real-time fraud detection system that scales to 50M transactions per day. Walk me through your architecture choices.', 'Hard')}
+      ${qa(2, 'You need to reduce model inference latency from 200ms to under 20ms without significant accuracy loss. What\'s your approach?', 'Hard')}
+      ${qa(3, 'How would you design an ML feature store that serves both training and online inference with data freshness guarantees?', 'Hard')}
+      ${qa(4, 'Explain the trade-offs between a streaming (Kafka/Flink) and batch (Spark) pipeline for your fraud detection use case.', 'Medium')}
+      ${qa(5, 'How do you detect and handle data drift in a production ML model? What monitoring would you set up?', 'Medium')}
+      ${qa(6, 'Walk me through how you would structure a dbt project for a large e-commerce data warehouse.', 'Easy')}
+    </div>`;
+}
+
+function behavioral() {
+  return `
+    <div class="section-h">Behavioural Questions</div>
+    <div class="section-sub">STAR-format questions designed to surface leadership, collaboration, and growth signals</div>
+    <div class="qa-list">
+      ${qa(1, 'Tell me about a time you had to push back on a product stakeholder\'s request because it would have compromised model integrity. How did you handle it?', 'Medium')}
+      ${qa(2, 'Describe the most complex cross-functional project you\'ve owned. How did you align engineering, data science, and product toward a shared outcome?', 'Medium')}
+      ${qa(3, 'Walk me through a failure in an ML project. What did you learn, and how did it change how you work?', 'Medium')}
+      ${qa(4, 'You mentioned mentoring 4 engineers at Stripe. Tell me about one who grew significantly. What did you do?', 'Easy')}
+      ${qa(5, 'Describe a time you had to make a high-stakes technical decision under time pressure with incomplete information.', 'Hard')}
+    </div>`;
+}
+
+function situational() {
+  return `
+    <div class="section-h">Situational Questions</div>
+    <div class="section-sub">Hypothetical scenarios to assess judgment, prioritisation, and decision-making under pressure</div>
+    <div class="qa-list">
+      ${qa(1, 'You\'ve just discovered that a model you shipped 2 weeks ago has a subtle bias that disproportionately flags transactions from a specific demographic. It\'s in production at scale. What do you do in the next 24 hours?', 'Hard')}
+      ${qa(2, 'You\'re 2 weeks into a new role and notice the team\'s ML infra is significantly outdated — no versioning, no monitoring. Your manager hasn\'t flagged this. How do you proceed?', 'Medium')}
+      ${qa(3, 'Your ML experiment shows 0.5% improvement in precision. The business team wants to ship immediately. Engineering says it requires a 3-week refactor. What do you recommend?', 'Medium')}
+    </div>`;
+}
+
+function deepdive() {
+  return `
+    <div class="section-h">Deep Dive Questions</div>
+    <div class="section-sub">Probing questions to verify depth of claimed expertise</div>
+    <div class="qa-list">
+      ${qa(1, 'You list PyTorch as "expert" level. Describe a time you implemented a custom autograd operation or wrote a custom CUDA kernel. What was the performance outcome?', 'Hard')}
+      ${qa(2, 'Walk me through the internals of gradient boosting. Why would you choose XGBoost over CatBoost for a high-cardinality categorical feature problem?', 'Hard')}
+      ${qa(3, 'You worked with Kafka at Flipkart. Explain how you ensured exactly-once semantics in your consumer group. What edge cases did you encounter?', 'Hard')}
+      ${qa(4, 'Your resume mentions Terraform at intermediate level. Have you designed multi-account AWS landing zones or worked with Terraform modules at scale?', 'Medium')}
+    </div>`;
+}
+
+function bias() {
+  return `
+    <div class="section-h">Ethical Bias Audit</div>
+    <div class="section-sub">Fairness, PII detection, and demographic signal analysis for equitable hiring</div>
+    <div class="two-col">
+      <div class="card-block">
+        <div class="card-block-title">Fairness Scores</div>
+        <div class="bias-meter">
+          ${biasRow('Gender Neutrality',     96)}
+          ${biasRow('Age Signal',            88)}
+          ${biasRow('Nationality Bias',      82)}
+          ${biasRow('Educational Prestige',  70)}
+          ${biasRow('Name-based Inference',  94)}
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title">PII Signals Detected</div>
+        <div class="item-list">
+          ${listItem('amber', '⚠', '"IIT Bombay" may trigger prestige bias in automated screening', 'Prestige Signal')}
+          ${listItem('amber', '⚠', 'Name reveals gender and probable ethnicity — blind screening recommended', 'Name PII')}
+          ${listItem('green', '✓', 'No age, DOB, marital status, or photo detected', 'Clean')}
+          ${listItem('green', '✓', 'No address or contact PII in extracted text', 'Clean')}
+        </div>
+      </div>
+    </div>
+    <div class="card-block" style="border-left:3px solid var(--violet)">
+      <div class="card-block-title" style="color:var(--violet)">Recommendations for Fair Process</div>
+      <p style="font-size:.8rem;color:var(--text-2);line-height:1.7;margin-top:8px">
+        Consider blind resume review for first-round scoring. Educational institution prestige can introduce
+        systemic bias — focus on outcomes (GPA, projects, awards) rather than institution name.
+        Structured interviews with pre-defined rubrics recommended to neutralise interviewer halo effects.
+      </p>
+    </div>`;
+}
+
+function coaching() {
+  return `
+    <div class="section-h">Candidate Coaching Report</div>
+    <div class="section-sub">Personalised resume and career improvement recommendations</div>
+    <div class="item-list" style="margin-bottom:20px">
+      ${listItem('blue', '1', 'Add distributed systems project to GitHub or portfolio. Even a side project demonstrating Raft consensus or event sourcing would close the #1 gap significantly.', 'High Priority')}
+      ${listItem('blue', '2', 'Quantify the Churn model impact — "86% precision" is the input, not the output. Add: "reducing quarterly churn by X% / saving $Y in annual revenue."', 'Medium Priority')}
+      ${listItem('blue', '3', 'Remove or substantiate Kubernetes and GraphQL. Either add a specific project or remove to avoid flag in technical screening.', 'Medium Priority')}
+      ${listItem('blue', '4', 'Consider adding an "Open Source / Publications" section — ML candidates with GitHub contributions rank 23% higher in technical screening pipelines.', 'Low Priority')}
+    </div>
+    <div class="card-block">
+      <div class="card-block-title">Suggested Resume Rewrite — Sample Bullet</div>
+      <div style="background:var(--danger-dim);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px;font-size:.78rem;color:var(--danger)">
+        ❌ Before: "Developed a churn prediction model achieving 86% precision for a telecom client."
+      </div>
+      <div style="background:var(--green-dim);border-radius:var(--r-sm);padding:10px 14px;font-size:.78rem;color:var(--green)">
+        ✅ After: "Built churn prediction model (86% precision, 91% recall) deployed to production serving 4M subscribers, reducing monthly churn by 2.3% and saving an estimated $1.4M annually in retention spend."
+      </div>
+    </div>`;
+}
+
+function outreach() {
+  const messages = [
+    {
+      type: 'LinkedIn InMail',
+      icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x=".5" y="2.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d=".5 4.5l7.5 5 7.5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      color: 'var(--blue-dim)',
+      textColor: 'var(--blue)',
+      body: `Hi Priya,<br><br>I came across your work on real-time fraud detection at Stripe — the 85% latency improvement is impressive and directly relevant to what we're building. We're scaling our ML platform team and I think your background in production ML + data engineering would be a strong fit.<br><br>Would you be open to a 20-min call this week?`,
+    },
+    {
+      type: 'Cold Email',
+      icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x=".5" y="2.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d=".5 4.5l7.5 5 7.5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      color: 'var(--violet-dim)',
+      textColor: 'var(--violet)',
+      body: `Subject: ML Platform role at [Company] — your Stripe work caught our eye<br><br>Hi Priya,<br><br>Your fraud detection work at Stripe — particularly reducing inference from 120ms to 18ms — is exactly the kind of impact we're looking for. We're building a new ML platform team with a Senior/Staff ML Engineer opening you might find compelling.<br><br>Happy to share more details if you're open to exploring.`,
+    },
+    {
+      type: 'WhatsApp / SMS',
+      icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x=".5" y="2.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d=".5 4.5l7.5 5 7.5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      color: 'var(--green-dim)',
+      textColor: 'var(--green)',
+      body: `Hi Priya, this is [Name] from [Company]. Your ML engineering background looks like a great fit for a senior role we're hiring for. Would love to connect — is this a good number to reach you?`,
+    },
+  ];
+
+  return `
+    <div class="section-h">Recruiter Outreach Templates</div>
+    <div class="section-sub">AI-crafted personalised messages for candidate engagement</div>
+    ${messages.map(m => `
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-icon" style="background:${m.color};color:${m.textColor}">${m.icon}</div>
+          <div>
+            <div class="agent-title">${m.type}</div>
+            <div class="agent-sub">Personalised for Priya Sharma · Senior ML Engineer</div>
+          </div>
+        </div>
+        <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px;font-size:.78rem;color:var(--text-2);line-height:1.7;font-family:var(--font-mono)">
+          ${m.body}
+        </div>
+      </div>`).join('')}`;
+}
+
+function pipeline() {
+  return `
+    <div class="section-h">Talent Pipeline</div>
+    <div class="section-sub">AI recruitment agent — candidate pipeline management</div>
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="4" r="2.2" stroke="currentColor"/><circle cx="3" cy="8" r="2.2" stroke="currentColor"/><circle cx="3" cy="12" r="2.2" stroke="currentColor"/><path d="M5.2 4h10M5.2 8h8M5.2 12h9" stroke="currentColor" stroke-linecap="round"/></svg>
+        </div>
+        <div><div class="agent-title">Pipeline Status</div><div class="agent-sub">Senior ML Engineer — Active Pipeline</div></div>
+      </div>
+      <div class="pipeline-stages">
+        <div class="pipe-stage"><div class="pipe-stage-label">Applied</div><div class="pipe-stage-count">24</div></div>
+        <div class="pipe-stage"><div class="pipe-stage-label">Screened</div><div class="pipe-stage-count">12</div></div>
+        <div class="pipe-stage active"><div class="pipe-stage-label">Interview</div><div class="pipe-stage-count">4</div></div>
+        <div class="pipe-stage"><div class="pipe-stage-label">Offer</div><div class="pipe-stage-count">1</div></div>
+        <div class="pipe-stage"><div class="pipe-stage-label">Hired</div><div class="pipe-stage-count">0</div></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card-block">
+        <div class="card-block-title">Top Candidates</div>
+        <div class="item-list">
+          ${listItem('green', '1', 'Priya Sharma · Score 84 · ✦ Strong Hire', 'In Interview')}
+          ${listItem('blue',  '2', 'Arjun Mehta · Score 79 · Hire',           'In Interview')}
+          ${listItem('amber', '3', 'Sun Li · Score 71 · Maybe',               'Screening')}
+          ${listItem('red',   '4', 'Alex Turner · Score 58 · Pass',           'Screened Out')}
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title">Pipeline Health</div>
+        <div class="bias-meter" style="margin-top:8px">
+          ${biasRow('Funnel Conversion',   50)}
+          ${biasRow('Time-to-screen',      78)}
+          ${biasRow('Diversity Score',     62)}
+          ${biasRow('Offer Acceptance',    85)}
+        </div>
+      </div>
+    </div>`;
+}
+
+function jobgen() {
+  return `
+    <div class="section-h">JD Generator</div>
+    <div class="section-sub">AI-generated inclusive job description based on candidate intelligence</div>
+    <div class="card-block" style="font-family:var(--font-mono);font-size:.75rem;line-height:1.9;color:var(--text-2)">
+      <div style="font-family:var(--font-head);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px">Senior ML Engineer</div>
+      <div style="color:var(--accent);margin-bottom:16px;font-family:var(--font-body);font-size:.78rem">Full-time · Remote-friendly · Engineering</div>
+      <strong style="color:var(--text);font-family:var(--font-body)">About the Role</strong><br>
+      We're looking for a Senior ML Engineer to join our growing ML Platform team. You'll own the full lifecycle of production ML systems — from feature engineering and model training to deployment, monitoring, and iteration at scale.<br><br>
+      <strong style="color:var(--text);font-family:var(--font-body)">What You'll Do</strong><br>
+      • Design and deploy ML systems serving millions of requests per day<br>
+      • Build real-time feature pipelines using Kafka, Spark, and dbt<br>
+      • Partner with product and data science to translate business problems into ML solutions<br>
+      • Mentor junior engineers and champion MLOps best practices<br><br>
+      <strong style="color:var(--text);font-family:var(--font-body)">Requirements</strong><br>
+      • 5+ years Python in production ML environments<br>
+      • Hands-on experience with model deployment, monitoring, and A/B testing<br>
+      • Strong data engineering fundamentals (Spark, dbt, Airflow)<br>
+      • Experience with distributed systems (preferred)<br><br>
+      <em style="color:var(--text-3)">Note: AI-generated for inclusivity — neutral language, skills-first, no prestige signals.</em>
+    </div>`;
+}
+
+function decision() {
+  return `
+    <div class="section-h">AI Hire Decision</div>
+    <div class="section-sub">Structured recommendation with confidence scoring and risk assessment</div>
+    <div class="card-block" style="margin-bottom:20px;background:var(--green-dim);border-color:rgba(52,211,153,0.25)">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="font-family:var(--font-head);font-size:2.5rem;font-weight:800;color:var(--green);letter-spacing:-0.04em">HIRE</div>
+        <div>
+          <div style="font-weight:700;color:var(--green);font-size:1rem">Strong Hire Recommendation</div>
+          <div style="font-size:.75rem;color:var(--text-2);margin-top:2px;font-family:var(--font-mono)">Confidence: 87% · Model: Llama 3.3 70B</div>
+        </div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card-block">
+        <div class="card-block-title">Decision Factors — For</div>
+        <div class="item-list">
+          ${listItem('green', '✓', 'ATS score 84/100 — top 12% of candidates evaluated')}
+          ${listItem('green', '✓', 'Directly attributable revenue impact of $3.2M+')}
+          ${listItem('green', '✓', 'Rare combination of ML depth + data engineering')}
+          ${listItem('green', '✓', 'Demonstrated mentorship and engineering leadership')}
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-block-title">Decision Factors — Against</div>
+        <div class="item-list">
+          ${listItem('red',   '✗', 'Missing distributed systems architecture experience')}
+          ${listItem('amber', '~', 'Experimentation platform ownership unproven')}
+          ${listItem('amber', '~', 'Kubernetes exposure appears surface-level')}
+        </div>
+      </div>
+    </div>
+    <div class="card-block" style="border-left:3px solid var(--green)">
+      <div class="card-block-title">Suggested Offer Range</div>
+      <div style="font-family:var(--font-head);font-size:1.8rem;font-weight:800;letter-spacing:-0.04em;color:var(--green);margin:8px 0">₹55 – 65L CTC</div>
+      <p style="font-size:.78rem;color:var(--text-2)">Based on YOE (7 years), role calibration (Senior), and market benchmarks for ML engineers in Bangalore / Remote-India. Recommend equity component of 0.05–0.1% with 4-year vest.</p>
+    </div>`;
+}
+
+
+/* ══════════════════════════════════════════
+   HELPER BUILDERS
+══════════════════════════════════════════ */
+
+function axisCard(name, score, color) {
+  return `<div class="axis-card">
+    <div class="axis-top">
+      <span class="axis-name">${name}</span>
+      <span class="axis-score" style="color:${color}">${score}</span>
+    </div>
+    <div class="axis-progress">
+      <div class="axis-fill" style="background:${color};width:0%" data-w="${score}"></div>
+    </div>
+  </div>`;
+}
+
+function listItem(color, bullet, text, badge = '') {
+  return `<div class="item-row">
+    <div class="item-bullet ${color}">${bullet}</div>
+    <div class="item-text">${text}</div>
+    ${badge ? `<span class="item-badge badge-${color}">${badge}</span>` : ''}
+  </div>`;
+}
+
+function biasRow(label, score) {
+  const color = score >= 85 ? 'var(--green)' : score >= 65 ? 'var(--amber)' : 'var(--danger)';
+  return `<div class="bias-row">
+    <div class="bias-label">${label}</div>
+    <div class="bias-track"><div class="bias-fill" style="background:${color}" data-w="${score}"></div></div>
+    <div class="bias-score">${score}%</div>
+  </div>`;
+}
+
+function tlItem(title, company, date, desc) {
+  return `<div class="tl-item">
+    <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+    <div>
+      <div class="tl-title">${title}</div>
+      <div class="tl-company">${company}</div>
+      <div class="tl-date">${date}</div>
+      <div class="tl-desc">${desc}</div>
+    </div>
+  </div>`;
+}
+
+function qa(num, question, difficulty) {
+  const cls = { Hard: 'difficulty-hard', Medium: 'difficulty-medium', Easy: 'difficulty-easy' }[difficulty];
+  return `<div class="qa-item">
+    <div class="qa-q">
+      <span class="qa-num">Q${num}</span>
+      <span class="qa-text">${question}</span>
+      <span class="qa-difficulty ${cls}">${difficulty}</span>
+    </div>
+    <div class="qa-a">
+      <strong>What to listen for:</strong> Look for specificity over generality — the best candidates cite exact numbers, trade-offs made, and lessons learned.
+      Red flag: vague answers that could apply to any situation.
+    </div>
+  </div>`;
+}
+
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('results-timestamp').textContent =
+    'Generated ' + new Date().toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+});

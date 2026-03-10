@@ -87,7 +87,8 @@ async def analyze_resume(
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
 
-    result = analyzer.analyze(resume_text, job_description, target_role, company_name)
+    # Pass job_description only — matches rag_chain.py signature
+    result = analyzer.analyze(resume_text, job_description)
     return result
 
 @app.post("/agent")

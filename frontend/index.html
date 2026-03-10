@@ -3,280 +3,211 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TalentIQ — AI Resume Intelligence Platform</title>
+  <title>TalentIQ — AI Talent Intelligence Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- BACKGROUND GRID -->
 <div class="bg-grid"></div>
-<div class="bg-glow"></div>
+<div class="bg-orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 
-<!-- HEADER -->
-<header class="header">
-  <div class="header-inner">
+<header class="hdr">
+  <div class="hdr-in">
     <div class="logo">
-      <div class="logo-mark">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M11 2L20 7V15L11 20L2 15V7L11 2Z" stroke="url(#lg1)" stroke-width="1.5" fill="none"/>
-          <path d="M11 6L16 9V13L11 16L6 13V9L11 6Z" fill="url(#lg2)" opacity="0.8"/>
+      <div class="lm">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 1.5L18 6V14L10 18.5L2 14V6L10 1.5Z" stroke="url(#hg)" stroke-width="1.4" fill="none"/>
+          <path d="M10 5.5L14.5 8V12L10 15L5.5 12V8L10 5.5Z" fill="url(#hg2)"/>
           <defs>
-            <linearGradient id="lg1" x1="2" y1="2" x2="20" y2="20">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#06b6d4"/>
-            </linearGradient>
-            <linearGradient id="lg2" x1="6" y1="6" x2="16" y2="16">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#06b6d4"/>
-            </linearGradient>
+            <linearGradient id="hg" x1="2" y1="1.5" x2="18" y2="18.5"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient>
+            <linearGradient id="hg2" x1="5.5" y1="5.5" x2="14.5" y2="15"><stop stop-color="#818cf8" stop-opacity=".9"/><stop offset="1" stop-color="#22d3ee" stop-opacity=".7"/></linearGradient>
           </defs>
         </svg>
       </div>
-      <span class="logo-text">Talent<span>IQ</span></span>
+      <span class="lt">Talent<em>IQ</em></span>
+      <span class="lv">v2.0</span>
     </div>
-    <nav class="nav-pills">
-      <span class="nav-tag">AI-Powered</span>
-      <span class="nav-tag">ATS Analysis</span>
-      <span class="nav-tag free">Free Forever</span>
-    </nav>
-    <div class="header-right">
-      <span class="model-badge">
-        <span class="pulse-dot"></span>
-        Llama 3.3 · 70B
-      </span>
+    <div class="hdr-pills">
+      <span class="hp">🧠 Deep NLP</span>
+      <span class="hp">⚖️ Bias Shield</span>
+      <span class="hp">🎯 JD Matching</span>
+      <span class="hp">📊 6-Axis ATS</span>
+      <span class="hp new">✦ 10 AI Pillars</span>
+    </div>
+    <div class="hdr-right">
+      <div class="mbadge"><span class="mdot"></span>Llama 3.3 · 70B</div>
     </div>
   </div>
 </header>
 
-<!-- UPLOAD SECTION -->
-<section id="s-upload" class="section-upload">
-  <div class="upload-container">
-    <div class="hero-text">
-      <div class="hero-eyebrow">
-        <span class="eyebrow-dot"></span>
-        Industry-Grade Resume Intelligence
-      </div>
-      <h1>Decode Every Resume<br><span class="gradient-text">Like a Hiring Expert</span></h1>
-      <p class="hero-sub">Deep ATS analysis, candidate scoring, skill mapping, and 25 targeted interview questions — powered by state-of-the-art AI. Trusted by recruiters at top companies.</p>
-      <div class="hero-stats">
-        <div class="stat"><span class="stat-n">10+</span><span class="stat-l">Data Points</span></div>
-        <div class="stat-div"></div>
-        <div class="stat"><span class="stat-n">25</span><span class="stat-l">Interview Qs</span></div>
-        <div class="stat-div"></div>
-        <div class="stat"><span class="stat-n">&lt;30s</span><span class="stat-l">Analysis Time</span></div>
+<!-- UPLOAD -->
+<section id="s-upload" class="su">
+  <div class="su-wrap">
+    <div class="hero">
+      <div class="hbadge"><span class="hbpulse"></span>Future-Generation ATS Intelligence · 10 Pillars Active</div>
+      <h1>Hire Smarter.<br><span class="gtext">Deeper AI Analysis.</span></h1>
+      <p class="hdesc">Beyond keyword matching. TalentIQ performs deep semantic understanding, career trajectory analysis, ethical bias auditing, JD alignment scoring, and generates 30 personalized interview questions — in under 60 seconds.</p>
+      <div class="fpills">
+        <div class="fp">🔍 Semantic NLP</div>
+        <div class="fp">📐 Skill Taxonomy</div>
+        <div class="fp">🎯 JD Match Score</div>
+        <div class="fp">⚖️ Bias Audit</div>
+        <div class="fp">💬 30 Interview Qs</div>
+        <div class="fp">🌱 Candidate Coaching</div>
+        <div class="fp">🔴 Red Flag Detection</div>
+        <div class="fp">🚀 Career Trajectory</div>
       </div>
     </div>
 
-    <div class="upload-card" id="upload-box">
-      <div class="upload-card-inner">
-        <div class="upload-icon-wrap">
-          <div class="upload-icon-ring"></div>
-          <svg class="upload-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <path d="M16 4L26 10V22L16 28L6 22V10L16 4Z" stroke="url(#ugrad)" stroke-width="1.5" fill="none"/>
-            <path d="M16 12V20M12 16L16 12L20 16" stroke="url(#ugrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="ugrad" x1="6" y1="4" x2="26" y2="28">
-                <stop offset="0%" stop-color="#6366f1"/>
-                <stop offset="100%" stop-color="#06b6d4"/>
-              </linearGradient>
-            </defs>
-          </svg>
+    <div class="input-panel">
+      <div class="dropzone" id="upload-box">
+        <div class="dz-inner">
+          <div class="dz-icon"><div class="dz-ring"></div>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path d="M14 3L24 9V19L14 25L4 19V9L14 3Z" stroke="url(#dzg)" stroke-width="1.4" fill="none"/>
+              <path d="M14 10V18M10 14L14 10L18 14" stroke="url(#dzg)" stroke-width="1.4" stroke-linecap="round"/>
+              <defs><linearGradient id="dzg" x1="4" y1="3" x2="24" y2="25"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+            </svg>
+          </div>
+          <strong>Drop Resume PDF here</strong>
+          <span>or <label for="file-input" class="browse">browse files</label></span>
+          <div class="dz-meta">PDF · Max 10MB · No data stored · Encrypted</div>
         </div>
-        <h3>Drop Resume Here</h3>
-        <p>or <label for="file-input" class="browse-link">browse files</label></p>
-        <div class="upload-meta">
-          <span>PDF format</span>
-          <span class="dot-sep">·</span>
-          <span>Max 10MB</span>
-          <span class="dot-sep">·</span>
-          <span>Secure & Private</span>
-        </div>
+        <input type="file" id="file-input" accept=".pdf" hidden>
       </div>
-      <input type="file" id="file-input" accept=".pdf" hidden>
-    </div>
 
-    <div id="file-ready" class="file-ready hidden">
-      <div class="file-chip">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="9" height="14" rx="1.5" stroke="#6366f1" stroke-width="1.2"/><path d="M5 5h5M5 8h5M5 11h3" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/></svg>
-        <span id="fname"></span>
+      <div id="file-ready" class="fr hidden">
+        <div class="fr-chip"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y=".5" width="7" height="12" rx="1.5" stroke="#818cf8" stroke-width="1.1"/><path d="M3.5 4h4M3.5 7h4M3.5 10h2" stroke="#818cf8" stroke-width="1" stroke-linecap="round"/></svg><span id="fname"></span></div>
+        <span class="fr-ok">✓ Ready</span>
       </div>
-      <button id="go-btn" onclick="startAnalysis()">
-        <span>Analyze Resume</span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+
+      <div class="jd-box">
+        <div class="jd-hdr">
+          <span class="jd-label">📋 Job Description <span class="opt">(Optional — enables JD match score)</span></span>
+        </div>
+        <textarea id="jd-input" class="jd-ta" placeholder="Paste the full job description here to unlock: JD Match Score, Skill Gap Analysis, Missing Keywords, and role-specific interview questions..."></textarea>
+      </div>
+
+      <button id="go-btn" class="analyze-btn" onclick="startAnalysis()" disabled>
+        <span id="btn-txt">Upload a Resume First</span>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5h10M8.5 3.5l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
 
-    <div class="trust-bar">
-      <span>Powered by</span>
-      <span class="trust-item">Groq Inference</span>
-      <span class="trust-sep">·</span>
-      <span class="trust-item">LangChain</span>
-      <span class="trust-sep">·</span>
-      <span class="trust-item">FastAPI</span>
-      <span class="trust-sep">·</span>
-      <span class="trust-item">End-to-End Encrypted</span>
+    <div class="trust">
+      Powered by <span>Groq API</span> · <span>LangChain</span> · <span>FastAPI</span> · <span>AES-256 Encrypted</span> · <span>Zero Data Retention</span>
     </div>
   </div>
 </section>
 
-<!-- LOADING SECTION -->
-<section id="s-loading" class="section-loading hidden">
-  <div class="loading-container">
-    <div class="loading-visual">
-      <div class="loading-rings">
-        <div class="lr lr1"></div>
-        <div class="lr lr2"></div>
-        <div class="lr lr3"></div>
-      </div>
-      <div class="loading-center-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 3L21 8V16L12 21L3 16V8L12 3Z" stroke="url(#lgrad)" stroke-width="1.5" fill="none"/>
-          <path d="M12 8L16 10.5V14.5L12 17L8 14.5V10.5L12 8Z" fill="url(#lgrad2)"/>
-          <defs>
-            <linearGradient id="lgrad" x1="3" y1="3" x2="21" y2="21"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
-            <linearGradient id="lgrad2" x1="8" y1="8" x2="16" y2="17"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
-          </defs>
-        </svg>
+<!-- LOADING -->
+<section id="s-loading" class="sl hidden">
+  <div class="sl-wrap">
+    <div class="sl-anim">
+      <div class="slr r1"></div><div class="slr r2"></div><div class="slr r3"></div>
+      <div class="slc">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1.5L18 6V14L10 18.5L2 14V6L10 1.5Z" stroke="url(#slg)" stroke-width="1.3" fill="none"/><path d="M10 5.5L14.5 8V12L10 15L5.5 12V8L10 5.5Z" fill="url(#slg2)"/><defs><linearGradient id="slg" x1="2" y1="1.5" x2="18" y2="18.5"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient><linearGradient id="slg2" x1="5.5" y1="5.5" x2="14.5" y2="15"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs></svg>
       </div>
     </div>
-    <h2 class="loading-title">Analyzing Resume</h2>
-    <p class="loading-sub">Our AI is performing deep intelligence extraction</p>
-    <div class="loading-steps">
-      <div class="lstep" id="ls1">
-        <div class="lstep-icon">📄</div>
-        <div class="lstep-info">
-          <div class="lstep-title">Parsing PDF Structure</div>
-          <div class="lstep-desc">Extracting text, layout, and metadata</div>
-        </div>
-        <div class="lstep-status"></div>
-      </div>
-      <div class="lstep" id="ls2">
-        <div class="lstep-icon">🔍</div>
-        <div class="lstep-info">
-          <div class="lstep-title">ATS Compatibility Scan</div>
-          <div class="lstep-desc">Checking format, keywords, and structure</div>
-        </div>
-        <div class="lstep-status"></div>
-      </div>
-      <div class="lstep" id="ls3">
-        <div class="lstep-icon">🧠</div>
-        <div class="lstep-info">
-          <div class="lstep-title">AI Deep Analysis</div>
-          <div class="lstep-desc">Llama 3.3 70B evaluating candidate profile</div>
-        </div>
-        <div class="lstep-status"></div>
-      </div>
-      <div class="lstep" id="ls4">
-        <div class="lstep-icon">💬</div>
-        <div class="lstep-info">
-          <div class="lstep-title">Generating Interview Pack</div>
-          <div class="lstep-desc">Creating 25 targeted questions across 5 categories</div>
-        </div>
-        <div class="lstep-status"></div>
-      </div>
+    <h2>Running Deep Intelligence Analysis</h2>
+    <p>6 AI modules processing your resume simultaneously</p>
+    <div class="sl-steps">
+      <div class="sls" id="ls1"><span>📄</span><div><b>Semantic PDF Parsing</b><small>Extracting structure, context & metadata</small></div><div class="slst"></div></div>
+      <div class="sls" id="ls2"><span>🧠</span><div><b>Deep NLP Profile Extraction</b><small>Career trajectory, transferable skills, growth signals</small></div><div class="slst"></div></div>
+      <div class="sls" id="ls3"><span>🎯</span><div><b>ATS Scoring + JD Alignment</b><small>6-dimensional scoring & job match analysis</small></div><div class="slst"></div></div>
+      <div class="sls" id="ls4"><span>⚖️</span><div><b>Ethical Bias Audit</b><small>PII detection, proxy identification, merit isolation</small></div><div class="slst"></div></div>
+      <div class="sls" id="ls5"><span>💬</span><div><b>30-Question Interview Pack</b><small>Technical, behavioral, situational, deep-dive & red flags</small></div><div class="slst"></div></div>
+      <div class="sls" id="ls6"><span>🌱</span><div><b>Candidate Coaching Report</b><small>Upskilling roadmap, course recommendations & feedback</small></div><div class="slst"></div></div>
     </div>
   </div>
 </section>
 
-<!-- RESULTS SECTION -->
-<section id="s-results" class="section-results hidden">
-  <div class="results-header">
-    <button class="back-btn" onclick="resetApp()">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      New Analysis
-    </button>
-    <div class="results-title-wrap">
-      <h2 class="results-title">Candidate Intelligence Report</h2>
-      <span class="results-timestamp" id="report-time"></span>
+<!-- RESULTS -->
+<section id="s-results" class="sr hidden">
+
+  <div class="res-hdr">
+    <button class="back-btn" onclick="resetApp()">← New Analysis</button>
+    <div class="res-title-wrap">
+      <h2>Candidate Intelligence Report</h2>
+      <span id="report-meta" class="res-meta"></span>
     </div>
     <div id="rec-badge"></div>
   </div>
 
-  <!-- TOP CARDS ROW -->
-  <div class="top-cards">
-    <!-- Profile Card -->
+  <!-- KPI Strip -->
+  <div class="kpi-strip" id="kpi-strip"></div>
+
+  <!-- Top Row: Profile + Scores -->
+  <div class="top-row">
     <div class="profile-card card">
-      <div class="profile-avatar" id="pav"></div>
-      <div class="profile-details">
-        <h2 id="pname">—</h2>
-        <div class="profile-role" id="prole">—</div>
-        <div class="profile-tags" id="ptags"></div>
-        <div class="profile-contact" id="pcontact"></div>
+      <div class="pav" id="pav"></div>
+      <div class="pinfo">
+        <h2 id="pname"></h2>
+        <div id="prole" class="prole"></div>
+        <div id="pchips" class="pchips"></div>
+        <div id="plinks" class="plinks"></div>
+        <div id="puvp" class="puvp"></div>
       </div>
     </div>
 
-    <!-- Score Card -->
-    <div class="score-card card">
-      <div class="score-label">Overall Score</div>
-      <div class="score-ring-wrap">
-        <svg class="score-svg" viewBox="0 0 140 140" width="140" height="140">
-          <circle cx="70" cy="70" r="58" fill="none" stroke="#1e1e32" stroke-width="10"/>
-          <circle id="score-arc" cx="70" cy="70" r="58" fill="none"
-            stroke="url(#scoreGrad)" stroke-width="10" stroke-linecap="round"
-            style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)"/>
-          <defs>
-            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#06b6d4"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div class="score-center">
-          <span class="score-num" id="score-num">0</span>
-          <span class="score-denom">/100</span>
+    <div class="scores-col">
+      <div class="score-card card">
+        <div class="sc-lbl">Overall Score</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 130 130" width="130" height="130">
+            <circle cx="65" cy="65" r="54" fill="none" stroke="#13131f" stroke-width="10"/>
+            <circle id="sc-arc" cx="65" cy="65" r="54" fill="none" stroke="url(#sg)" stroke-width="10" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1)"/>
+            <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+          </svg>
+          <div class="ring-center"><span class="rn" id="sc-n">0</span><span class="rd">/100</span></div>
         </div>
+        <div id="sc-grade" class="sc-grade"></div>
       </div>
-      <div class="score-grade" id="score-grade">—</div>
-    </div>
 
-    <!-- ATS Breakdown Card -->
-    <div class="ats-card card">
-      <div class="card-title">ATS Breakdown</div>
-      <div class="ats-bars" id="ats-bars">
-        <!-- filled by JS -->
+      <div id="jd-score-card" class="score-card card hidden">
+        <div class="sc-lbl">JD Match Score</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 130 130" width="130" height="130">
+            <circle cx="65" cy="65" r="54" fill="none" stroke="#13131f" stroke-width="10"/>
+            <circle id="jd-arc" cx="65" cy="65" r="54" fill="none" stroke="url(#jg)" stroke-width="10" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1)"/>
+            <defs><linearGradient id="jg" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#10b981"/><stop offset="1" stop-color="#34d399"/></linearGradient></defs>
+          </svg>
+          <div class="ring-center"><span class="rn" id="jd-n">0</span><span class="rd">/100</span></div>
+        </div>
+        <div id="jd-grade" class="sc-grade"></div>
       </div>
     </div>
   </div>
 
-  <!-- SUMMARY BAR -->
   <div class="summary-bar card" id="psummary"></div>
 
-  <!-- TAB NAV -->
-  <div class="tab-nav">
-    <button class="tab-btn active" data-tab="skills">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5 7l1.5 1.5L9.5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Skills
-    </button>
-    <button class="tab-btn" data-tab="experience">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 3V2a1 1 0 011-1h4a1 1 0 011 1v1M1 7h12" stroke="currentColor" stroke-width="1.2"/></svg>
-      Experience
-    </button>
-    <button class="tab-btn" data-tab="strengths">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.8 3.6L13 5.4l-3 2.9.7 4.1L7 10.4l-3.7 2 .7-4.1L1 5.4l4.2-.8L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-      Strengths & Gaps
-    </button>
-    <button class="tab-btn" data-tab="technical">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4L1 7l3 3M10 4l3 3-3 3M8 2l-2 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Technical Qs
-    </button>
-    <button class="tab-btn" data-tab="behavioral">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 12c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Behavioral Qs
-    </button>
-    <button class="tab-btn" data-tab="situational">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.4 1.4M9.6 9.6L11 11M3 11l1.4-1.4M9.6 4.4L11 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Situational Qs
-    </button>
-    <button class="tab-btn danger" data-tab="redflags">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 12h10L7 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10v.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Red Flags
-    </button>
+  <!-- ATS 6-Axis -->
+  <div class="ats-section card" id="ats-section">
+    <div class="card-ttl">ATS 6-Axis Intelligence Breakdown</div>
+    <div class="ats-grid" id="ats-grid"></div>
   </div>
 
-  <!-- TAB BODY -->
-  <div class="tab-body" id="tab-body"></div>
+  <!-- Tab Nav -->
+  <div class="tab-nav">
+    <button class="tb active" data-t="overview">📊 Overview</button>
+    <button class="tb" data-t="skills">⚡ Skills Map</button>
+    <button class="tb" data-t="experience">🏢 Experience</button>
+    <button class="tb" data-t="analysis">⭐ Strengths & Gaps</button>
+    <button class="tb" data-t="jdmatch">🎯 JD Match</button>
+    <button class="tb" data-t="technical">💻 Technical Qs</button>
+    <button class="tb" data-t="behavioral">🧑 Behavioral Qs</button>
+    <button class="tb" data-t="situational">🧩 Situational Qs</button>
+    <button class="tb" data-t="deepdive">🔬 Deep Dive Qs</button>
+    <button class="tb tb-rf" data-t="redflags">🚩 Red Flags</button>
+    <button class="tb tb-bias" data-t="bias">⚖️ Bias Audit</button>
+    <button class="tb tb-coach" data-t="coaching">🌱 Coaching</button>
+    <button class="tb tb-out" data-t="outreach">✉ Outreach</button>
+    <button class="tb tb-adj" data-t="adjacency">🗺️ Skill Map</button>
+  </div>
+
+  <div id="tab-body" class="tab-body"></div>
 
 </section>
 

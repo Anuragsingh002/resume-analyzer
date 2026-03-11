@@ -605,6 +605,9 @@ class ResumeAnalyzer:
         Run complete pipeline: analysis -> questions -> bias -> coaching.
         Returns unified report dict.
         """
+        self.llm = _get_llm(temperature=0.15)
+        self.llm_creative = _get_llm(temperature=0.4)
+        
         analysis = self.analyze(resume_text, job_description)
 
         try:

@@ -56,9 +56,9 @@ class SkillAdjacencyRequest(BaseModel):
 async def root():
     return {"product": "TalentIQ", "version": "2.0", "status": "operational", "pillars": 10}
 
-# ✅ FIX 1: Returns 503 until analyzer is fully ready
-# Prevents wakeUpServer() from proceeding before AI engine is initialized
-@app.get("/health")
+# ✅ FIX: Accept both GET and HEAD requests
+# UptimeRobot sends HEAD requests — without this it returns 405 and thinks server is down
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     if analyzer is None:
         raise HTTPException(status_code=503, detail="Engine still initializing")
@@ -71,7 +71,7 @@ async def analyze_resume(
     target_role: str = Form(default=""),
     company_name: str = Form(default="")
 ):
-    # ✅ FIX 2: Null guard — prevents 500 crash if analyzer isn't ready
+    # ✅ FIX: Null guard — prevents 500 crash if analyzer isn't ready yet
     if analyzer is None:
         raise HTTPException(status_code=503, detail="AI engine is still initializing. Please retry in a few seconds.")
 

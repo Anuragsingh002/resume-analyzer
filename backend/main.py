@@ -4,16 +4,12 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from resume_parser import extract_text_from_pdf
 from rag_chain import ResumeAnalyzer
-import uvicorn, os, json
-
-analyzer = None
+import uvicorn, os, json, gc
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global analyzer
     print("🚀 TalentIQ v2.0 Engine starting...")
-    analyzer = ResumeAnalyzer()
-    print("✅ All 10 AI Pillars ready")
+    print("✅ Ready")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -49,14 +45,10 @@ class SkillAdjacencyRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"product": "TalentIQ", "version": "2.0", "status": "operational", "pillars": 10}
+    return {"product": "TalentIQ", "version": "2.0", "status": "operational"}
 
-# ✅ FIX: Accept both GET and HEAD requests
-# UptimeRobot sends HEAD requests — without this it returns 405 and thinks server is down
-@app.api_route("/health", methods=["GET", "HEAD"])
+@app.get("/health")
 async def health():
-    if analyzer is None:
-        raise HTTPException(status_code=503, detail="Engine still initializing")
     return {"status": "healthy", "engine": "TalentIQ v2.0", "model": "llama-3.3-70b-versatile"}
 
 @app.post("/analyze")
@@ -66,19 +58,25 @@ async def analyze_resume(
     target_role: str = Form(default=""),
     company_name: str = Form(default="")
 ):
-    # ✅ FIX: Null guard — prevents 500 crash if analyzer isn't ready yet
-    if analyzer is None:
-        raise HTTPException(status_code=503, detail="AI engine is still initializing. Please retry in a few seconds.")
-
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    if not file.filename.lower().endswith(('.pdf', '.docx', '.doc', '.txt')):
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, DOC, TXT files are supported")
+    
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large. Max 10MB.")
+    
     resume_text = extract_text_from_pdf(content)
     if not resume_text or len(resume_text.strip()) < 50:
-        raise HTTPException(status_code=400, detail="Could not extract text from PDF")
-    result = analyzer.full_analysis(resume_text, job_description)
+        raise HTTPException(status_code=400, detail="Could not extract text from file")
+
+    # Create a FRESH analyzer every single request — destroy after done
+    fresh_analyzer = ResumeAnalyzer()
+    try:
+        result = fresh_analyzer.full_analysis(resume_text, job_description)
+    finally:
+        del fresh_analyzer   # force destroy object
+        gc.collect()         # force free RAM immediately
+
     return result
 
 @app.post("/agent")
@@ -96,8 +94,6 @@ async def recruitment_agent(req: AgentRequest):
 
         ctx = req.candidate_context
         analysis = ctx.get("analysis", {})
-        iq = ctx.get("interview_questions", {})
-        co = ctx.get("candidate_feedback", {})
 
         system = f"""You are TalentIQ — an expert AI recruitment agent with full candidate context.
 
@@ -108,35 +104,53 @@ CANDIDATE PROFILE:
 - Recommendation: {analysis.get('hire_recommendation', 'N/A')}
 - Experience: {analysis.get('years_of_experience', 'N/A')} years
 - Level: {analysis.get('experience_level', 'N/A')}
-- Career Velocity: {analysis.get('career_velocity', 'N/A')}
-- Classification: {analysis.get('candidate_classification', {}).get('type', 'N/A')}
 - Top Strengths: {[s.get('strength') for s in analysis.get('top_strengths', [])[:3]]}
 - Red Flags: {[f.get('flag') for f in analysis.get('red_flags', [])[:3]]}
 - JD Match: {analysis.get('jd_match_score', 'N/A')}%
 - Impact Score: {analysis.get('quantified_impact', {}).get('score', 'N/A')}/100
 
-Answer recruiter questions concisely, professionally, and with specific data from the candidate profile above.
-Always be actionable. Format with **bold** for emphasis. Keep responses under 300 words."""
+Answer recruiter questions concisely and professionally.
+Format with **bold** for emphasis. Keep responses under 300 words."""
 
         messages = [SystemMessage(content=system), HumanMessage(content=req.message)]
         response = llm.invoke(messages)
+
+        # Clean up
+        del llm
+        gc.collect()
+
         return {"response": response.content}
     except Exception as e:
         return {"response": f"Agent error: {str(e)}"}
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):
-    result = analyzer.generate_outreach(req.profile, req.job_title, req.company_name)
+    analyzer = ResumeAnalyzer()
+    try:
+        result = analyzer.generate_outreach(req.profile, req.job_title, req.company_name)
+    finally:
+        del analyzer
+        gc.collect()
     return result
 
 @app.post("/generate-feedback-letter")
 async def generate_feedback_letter(req: FeedbackRequest):
-    result = analyzer.generate_feedback_letter(req.profile, req.decision, req.job_title)
+    analyzer = ResumeAnalyzer()
+    try:
+        result = analyzer.generate_feedback_letter(req.profile, req.decision, req.job_title)
+    finally:
+        del analyzer
+        gc.collect()
     return result
 
 @app.post("/skill-adjacency")
 async def skill_adjacency(req: SkillAdjacencyRequest):
-    result = analyzer.skill_adjacency(req.profile)
+    analyzer = ResumeAnalyzer()
+    try:
+        result = analyzer.skill_adjacency(req.profile)
+    finally:
+        del analyzer
+        gc.collect()
     return result
 
 if __name__ == "__main__":

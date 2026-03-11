@@ -87,8 +87,8 @@ async def analyze_resume(
     if not resume_text or len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
 
-    # Pass job_description only — matches rag_chain.py signature
-    result = analyzer.analyze(resume_text, job_description)
+    # full_analysis returns: analysis + interview_questions + bias_report + candidate_feedback
+    result = analyzer.full_analysis(resume_text, job_description)
     return result
 
 @app.post("/agent")
@@ -101,7 +101,7 @@ async def recruitment_agent(req: AgentRequest):
 
 @app.post("/generate-outreach")
 async def generate_outreach(req: OutreachRequest):
-    result = analyzer.generate_outreach_email(
+    result = analyzer.generate_outreach(
         req.profile, req.job_title, req.company_name
     )
     return result
@@ -115,7 +115,7 @@ async def generate_feedback_letter(req: FeedbackRequest):
 
 @app.post("/skill-adjacency")
 async def skill_adjacency(req: SkillAdjacencyRequest):
-    result = analyzer.assess_skill_adjacency(req.profile)
+    result = analyzer.skill_adjacency(req.profile)
     return result
 
 if __name__ == "__main__":

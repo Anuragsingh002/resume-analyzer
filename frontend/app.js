@@ -6,6 +6,13 @@
 
 const API = 'https://resume-analyzer-6wj1.onrender.com';
 
+// ✅ FIX: Keep Render server warm — runs once at page load, every 14 min
+// Previously this was incorrectly placed inside showToast() which caused
+// a new interval to be created on every toast, and it never ran on page load
+setInterval(async () => {
+  try { await fetch(`${API}/health`); } catch(_) {}
+}, 14 * 60 * 1000);
+
 // ── State ──────────────────────────────────────────────────
 let currentTab   = 'overview';
 let resumeFile   = null;
@@ -214,7 +221,7 @@ function renderContactLinks(ci) {
 // ── Icon library ───────────────────────────────────────────
 const icons = {
   email:    () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x=".5" y="2" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M.5 3.5l5.5 4 5.5-4" stroke="currentColor" stroke-linecap="round"/></svg>`,
-  phone:    () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 2h2.5l1 2.5-1.5 1a7 7 0 003.5 3.5l1-1.5L11 8.5v2.5A1 1 0 0110 12 10 10 0 010 2a1 1 0 011-1h1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>`,
+  phone:    () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 2h2.5l1 2.5-1.5 1a7 7 0 003.5 3.5l1-1.5L11 8.5v2.5A1 1 0 0110 12A10 10 0 010 2a1 1 0 011-1h1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>`,
   linkedin: () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x=".5" y=".5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.1"/><path d="M3 5v4.5M3 3.5V4M5 9.5V7c0-1 .7-2 2-2s2 1 2 2v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
   github:   () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 00-1.58 9.74c.25.05.34-.11.34-.24v-.87C3.06 9.9 2.76 9 2.76 9c-.23-.57-.56-.72-.56-.72-.45-.31.04-.3.04-.3.5.03.77.52.77.52.45.77 1.18.55 1.47.42.04-.33.17-.55.32-.68C3.19 8.1 2.1 7.7 2.1 5.9a1.91 1.91 0 01.51-1.33c-.05-.13-.22-.63.05-1.31 0 0 .42-.13 1.36.51a4.73 4.73 0 012.48 0c.94-.64 1.36-.51 1.36-.51.27.68.1 1.18.05 1.31a1.9 1.9 0 01.51 1.33c0 1.81-1.1 2.2-2.15 2.32.17.15.32.43.32.87v1.3c0 .13.09.29.34.24A5 5 0 006 1z" fill="currentColor"/></svg>`,
   twitter:  () => `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 9.5L5 6 1 2.5h2.5L6 5l2.5-2.5H11L7 5.5l4 4H8.5L6 7l-2.5 2.5H1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>`,
@@ -1169,8 +1176,4 @@ function showToast(msg, type='') {
   t.className   = 'toast ' + type;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), type==='error'?5000:2800);
-  // Keep Render server warm — ping every 14 minutes
-setInterval(async () => {
-  try { await fetch('https://resume-analyzer-6wj1.onrender.com/health'); } catch(_) {}
-}, 14 * 60 * 1000);
 }

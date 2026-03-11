@@ -56,8 +56,12 @@ class SkillAdjacencyRequest(BaseModel):
 async def root():
     return {"product": "TalentIQ", "version": "2.0", "status": "operational", "pillars": 10}
 
+# ✅ FIX 1: Returns 503 until analyzer is fully ready
+# Prevents wakeUpServer() from proceeding before AI engine is initialized
 @app.get("/health")
 async def health():
+    if analyzer is None:
+        raise HTTPException(status_code=503, detail="Engine still initializing")
     return {"status": "healthy", "engine": "TalentIQ v2.0", "model": "llama-3.3-70b-versatile"}
 
 @app.post("/analyze")
@@ -67,6 +71,10 @@ async def analyze_resume(
     target_role: str = Form(default=""),
     company_name: str = Form(default="")
 ):
+    # ✅ FIX 2: Null guard — prevents 500 crash if analyzer isn't ready
+    if analyzer is None:
+        raise HTTPException(status_code=503, detail="AI engine is still initializing. Please retry in a few seconds.")
+
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     content = await file.read()

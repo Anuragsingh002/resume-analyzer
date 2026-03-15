@@ -323,6 +323,9 @@ function switchTab(tab) {
 
   const main = document.getElementById('r-main');
   if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Init the mouse tracking glow effect dynamically after the new cards are rendered
+  setTimeout(initCardGlow, 50);
 }
 
 /* ── Post-render animations ──────────────────────── */
@@ -1269,3 +1272,57 @@ function showToast(msg, type = '') {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), type === 'error' ? 5000 : 2800);
 }
+
+/* ═══════════════════════════════════════════════════
+   MODERN UX UPGRADES
+════════════════════════════════════════════════════ */
+
+/* ── Mouse Tracking Card Glow ────────────────────── */
+function initCardGlow() {
+  const main = document.getElementById('r-main');
+  if (!main) return;
+  main.addEventListener('mousemove', (e) => {
+    const cards = document.querySelectorAll('.card');
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty('--mouse-x', `${x}px`);
+      card.style.setProperty('--mouse-y', `${y}px`);
+    }
+  });
+}
+
+/* ── Magnetic CTA Buttons ────────────────────────── */
+function initMagneticButtons() {
+  const magnets = document.querySelectorAll('.analyze-btn');
+  magnets.forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const x = (e.clientX - rect.left) - rect.width / 2;
+      const y = (e.clientY - rect.top) - rect.height / 2;
+      btn.style.transform = `translate(${x * 0.1}px, ${y * 0.1}px) scale(1.02)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = `translate(0px, 0px) scale(1)`;
+    });
+  });
+}
+
+/* ── Command Palette (CMD/CTRL + K) ──────────────── */
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    if (document.getElementById('screen-upload').classList.contains('active')) {
+      document.getElementById('resume-file').click();
+    } else {
+      switchTab('agent');
+      setTimeout(() => document.getElementById('agent-input').focus(), 100);
+    }
+  }
+});
+
+/* Initialize Upgrades on Load */
+document.addEventListener('DOMContentLoaded', () => {
+  initMagneticButtons();
+});
